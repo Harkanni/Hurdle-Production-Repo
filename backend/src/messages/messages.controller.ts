@@ -10,11 +10,11 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { MessagesService } from './messages.service';
-import { SendMessageDto } from './dto/send-message.dto';
-import { GetMessagesDto } from './dto/get-messages.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { MessagesService } from './messages.service.js';
+import { SendMessageDto } from './dto/send-message.dto.js';
+import { GetMessagesDto } from './dto/get-messages.dto.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 
 @UseGuards(JwtAuthGuard)
 @Controller('channels/:channelId/messages')

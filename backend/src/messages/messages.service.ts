@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ChannelsService } from '../channels/channels.service';
-import { SendMessageDto } from './dto/send-message.dto';
-import { GetMessagesDto } from './dto/get-messages.dto';
-import { MessagesGateway } from './messages.gateway';
-import { Message, MessageDocument } from './schemas/message.schema';
-import { Channel, ChannelDocument } from '../channels/schemas/channel.schema';
+import { ChannelsService } from '../channels/channels.service.js';
+import { SendMessageDto } from './dto/send-message.dto.js';
+import { GetMessagesDto } from './dto/get-messages.dto.js';
+import { MessagesGateway } from './messages.gateway.js';
+import { Message, MessageDocument } from './schemas/message.schema.js';
+import { Channel, ChannelDocument } from '../channels/schemas/channel.schema.js';
 
 @Injectable()
 export class MessagesService {

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ChannelsService } from './channels.service';
-import { ChannelsController } from './channels.controller';
-import { Channel, ChannelSchema } from './schemas/channel.schema';
+import { ChannelsService } from './channels.service.js';
+import { ChannelsController } from './channels.controller.js';
+import { Channel, ChannelSchema } from './schemas/channel.schema.js';
 
-import { AuthModule } from '../auth/auth.module';
+import { AuthModule } from '../auth/auth.module.js';
 
 @Module({
   imports: [
