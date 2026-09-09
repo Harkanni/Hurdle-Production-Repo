@@ -1,114 +1,387 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Hurdle Backend — Channel Messages Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> **Module owner:** Raphael
+> **Branch:** `backend/channel-messages`
+> **Stack:** NestJS · TypeScript · MongoDB (Mongoose) · Socket.IO · JWT Auth
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This module handles **real-time channel messaging** for the Hurdle app. It exposes REST endpoints for channel management and message CRUD, plus a WebSocket gateway for live chat.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 📁 Module Structure
 
-## Project setup
-
-```bash
-$ npm install
+```
+src/
+├── auth/
+│   ├── jwt.strategy.ts           # JWT validation strategy
+│   ├── jwt-auth.guard.ts         # Route guard (attach to protected routes)
+│   ├── current-user.decorator.ts # @CurrentUser() decorator
+│   └── schemas/user.schema.ts    # User Mongoose schema
+├── channels/
+│   ├── channels.controller.ts    # Channel REST endpoints
+│   ├── channels.service.ts       # Channel business logic
+│   └── schemas/channel.schema.ts
+├── messages/
+│   ├── messages.controller.ts    # Message REST endpoints
+│   ├── messages.gateway.ts       # WebSocket gateway (real-time)
+│   ├── messages.service.ts       # Message business logic
+│   └── schemas/message.schema.ts
+└── main.ts                       # App bootstrap (port, CORS, prefix)
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## 🚀 Base URL
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+http://localhost:3000/api
 ```
 
-## Run tests
+All REST routes are prefixed with `/api`.
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+## 🔐 Authentication
 
-# test coverage
-$ npm run test:cov
+All endpoints and WebSocket connections are **JWT protected**.
+
+### How to send the token
+
+**REST requests** — include in the `Authorization` header:
+```
+Authorization: Bearer <your_jwt_token>
 ```
 
-## Deployment
+**WebSocket connections** — pass the token in the handshake:
+```js
+// Option 1: handshake auth (preferred)
+const socket = io('http://localhost:3000/chat', {
+  auth: { token: '<your_jwt_token>' }
+});
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+// Option 2: authorization header
+const socket = io('http://localhost:3000/chat', {
+  extraHeaders: { authorization: 'Bearer <your_jwt_token>' }
+});
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+> The JWT must contain `sub` (user ID), `email`, and `username` fields.
+> It is signed with the `JWT_SECRET` environment variable.
 
-## Observability
+---
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+## 📡 REST API Endpoints
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+### Channels
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/channels` | Create a new channel |
+| `GET` | `/api/channels` | List all channels (with `isMember` flag) |
+| `GET` | `/api/channels/:channelId` | Get a single channel by ID |
+| `POST` | `/api/channels/:channelId/join` | Join a channel |
+| `DELETE` | `/api/channels/:channelId/leave` | Leave a channel |
+| `GET` | `/api/channels/:channelId/members` | Get channel members |
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+#### `POST /api/channels` — Create Channel
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**Request body:**
+```json
+{
+  "name": "general",
+  "description": "General discussion"
+}
+```
 
-## Support
+**Response `201`:**
+```json
+{
+  "_id": "channel_id",
+  "name": "general",
+  "description": "General discussion",
+  "createdBy": "user_id",
+  "members": ["user_id"]
+}
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+---
 
-## Stay in touch
+#### `GET /api/channels` — List All Channels
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**Response `200`:**
+```json
+[
+  {
+    "_id": "channel_id",
+    "name": "general",
+    "description": "General discussion",
+    "isMember": true
+  }
+]
+```
 
-## License
+---
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+#### `POST /api/channels/:channelId/join` — Join Channel
+
+**Response `200`:**
+```json
+{ "message": "Joined channel successfully" }
+```
+
+---
+
+#### `DELETE /api/channels/:channelId/leave` — Leave Channel
+
+> The channel **creator cannot leave** their own channel.
+
+**Response `200`:**
+```json
+{ "message": "Left channel successfully" }
+```
+
+---
+
+#### `GET /api/channels/:channelId/members` — Get Members
+
+> You must be a **member** of the channel to view its members.
+
+**Response `200`:**
+```json
+[
+  { "id": "user_id", "username": "john_doe", "email": "john@example.com" }
+]
+```
+
+---
+
+### Messages
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/channels/:channelId/messages` | Send a message to a channel |
+| `GET` | `/api/channels/:channelId/messages` | Get message history (paginated) |
+| `DELETE` | `/api/channels/:channelId/messages/:messageId` | Delete a message (sender only) |
+
+---
+
+#### `POST /api/channels/:channelId/messages` — Send Message
+
+> You must be a **member** of the channel to send messages.
+
+**Request body:**
+```json
+{
+  "content": "Hello everyone!"
+}
+```
+
+- `content` — required, string, max **2000 characters**
+
+**Response `201`:**
+```json
+{
+  "_id": "message_id",
+  "channelId": "channel_id",
+  "senderId": "user_id",
+  "content": "Hello everyone!",
+  "createdAt": "2026-09-09T10:00:00.000Z"
+}
+```
+
+> Sending a message also **emits a `new_message` WebSocket event** to all users in the channel room automatically. You do NOT need to emit it yourself after calling this endpoint.
+
+---
+
+#### `GET /api/channels/:channelId/messages` — Get Message History
+
+Supports **cursor-based pagination** (not page numbers).
+
+**Query params:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | number | `50` | Number of messages to return (max 100) |
+| `before` | string | — | Message ID cursor — returns messages older than this ID |
+
+**Example:**
+```
+GET /api/channels/abc123/messages?limit=20&before=message_id_xyz
+```
+
+**Response `200`:**
+```json
+[
+  {
+    "_id": "message_id",
+    "channelId": "channel_id",
+    "senderId": "user_id",
+    "content": "Hello!",
+    "createdAt": "2026-09-09T10:00:00.000Z"
+  }
+]
+```
+
+**How to implement infinite scroll / load more:**
+1. Load initial messages: `GET /messages?limit=50`
+2. When user scrolls up, take the oldest message `_id` in the list
+3. Fetch older: `GET /messages?limit=50&before=<oldest_message_id>`
+
+---
+
+#### `DELETE /api/channels/:channelId/messages/:messageId` — Delete Message
+
+> Only the **original sender** can delete their message.
+
+**Response `200`:**
+```json
+{ "message": "Message deleted successfully" }
+```
+
+> Also emits a `message_deleted` WebSocket event to all users in the channel room.
+
+---
+
+## 🔌 WebSocket Gateway
+
+**Namespace:** `/chat`
+**URL:** `ws://localhost:3000/chat`
+
+Connect using the [Socket.IO](https://socket.io/docs/v4/client-api/) client library — **not** plain WebSocket.
+
+```bash
+npm install socket.io-client
+```
+
+---
+
+### Connection Example
+
+```js
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000/chat', {
+  auth: { token: 'your_jwt_token_here' }
+});
+
+socket.on('connected', (data) => {
+  console.log(data.message); // "Successfully connected to Hurdle chat"
+});
+
+socket.on('error', (err) => {
+  console.error(err.message); // e.g. "Invalid or expired token"
+});
+```
+
+---
+
+### Events You **Emit** (Client → Server)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `join_channel` | `{ channelId: string }` | Join a channel room to receive live messages |
+| `leave_channel` | `{ channelId: string }` | Leave a channel room |
+| `typing_start` | `{ channelId: string }` | Notify others you are typing |
+| `typing_stop` | `{ channelId: string }` | Notify others you stopped typing |
+
+**Example:**
+```js
+// Join a channel room (do this before expecting to receive messages)
+socket.emit('join_channel', { channelId: 'abc123' });
+
+// Typing indicators
+socket.emit('typing_start', { channelId: 'abc123' });
+socket.emit('typing_stop', { channelId: 'abc123' });
+```
+
+---
+
+### Events You **Listen For** (Server → Client)
+
+| Event | Payload | When it fires |
+|-------|---------|---------------|
+| `connected` | `{ message: string }` | On successful connection |
+| `joined_channel` | `{ channelId, message }` | After you emit `join_channel` |
+| `left_channel` | `{ channelId }` | After you emit `leave_channel` |
+| `new_message` | Message object | A new message was sent in a channel you joined |
+| `message_deleted` | `{ messageId, channelId }` | A message was deleted in a channel you joined |
+| `user_joined` | `{ channelId, user: { id, username } }` | Another user joined your channel room |
+| `user_left` | `{ channelId, user: { id, username } }` | Another user left your channel room |
+| `user_typing` | `{ channelId, user: { id, username } }` | Another user started typing |
+| `user_stopped_typing` | `{ channelId, user: { id, username } }` | Another user stopped typing |
+| `error` | `{ message: string }` | Auth failure or bad event payload |
+
+**Full listener setup example:**
+```js
+socket.on('new_message', (message) => {
+  // Append message to chat UI
+  console.log(`${message.senderId}: ${message.content}`);
+});
+
+socket.on('message_deleted', ({ messageId }) => {
+  // Remove the message with this ID from UI
+});
+
+socket.on('user_typing', ({ user }) => {
+  // Show "username is typing..." indicator
+  console.log(`${user.username} is typing...`);
+});
+
+socket.on('user_stopped_typing', ({ user }) => {
+  // Hide typing indicator for this user
+});
+
+socket.on('user_joined', ({ user }) => {
+  console.log(`${user.username} joined the channel`);
+});
+
+socket.on('user_left', ({ user }) => {
+  console.log(`${user.username} left the channel`);
+});
+```
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file in the root of the backend project:
+
+```env
+PORT=3000
+MONGODB_URI=mongodb://localhost:27017/hurdle
+JWT_SECRET=your_super_secret_key_here
+```
+
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Port the server runs on (default: `3000`) |
+| `MONGODB_URI` | MongoDB connection string |
+| `JWT_SECRET` | Secret for signing and verifying JWTs |
+
+---
+
+## 🛠️ Local Setup
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Create your .env file (see Environment Variables above)
+
+# 3. Start in dev/watch mode
+npm run start:dev
+```
+
+Server will be available at: `http://localhost:3000/api`
+
+---
+
+## 📝 Key Notes for Frontend Devs
+
+- **Every REST endpoint requires** `Authorization: Bearer <token>` header
+- **Use cursor-based pagination** with the `before` query param — not page numbers
+- **WebSocket namespace is `/chat`** — connect to `ws://localhost:3000/chat`, not the root
+- **REST send → auto WebSocket emit**: When a message is sent via `POST /messages`, the server automatically emits `new_message` to all WebSocket clients in that channel — no need to duplicate with a socket emit from the frontend
+- **Same for delete**: `DELETE /messages/:id` automatically fires `message_deleted` to the channel room
