@@ -38,25 +38,70 @@ function ChannelView({ channel, messages, setMessages }) {
   const [message, setMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   const fileInputRef = useRef(null);
+  const messageInputRef = useRef(null);
 
   const channelMessages = messages.filter(
     (item) => item.channelId === channel.id
   );
 
+  function getPlainMessage() {
+    return messageInputRef.current?.innerText.trim() || "";
+  }
+
+  function getRichMessage() {
+    return messageInputRef.current?.innerHTML || "";
+  }
+
+  function focusMessageInput() {
+    setTimeout(() => {
+      messageInputRef.current?.focus();
+    }, 0);
+  }
+
+  function runFormat(command) {
+    messageInputRef.current?.focus();
+    document.execCommand(command, false, null);
+    setMessage(getRichMessage());
+  }
+
+  function insertTextAtCursor(text) {
+    messageInputRef.current?.focus();
+    document.execCommand("insertText", false, text);
+    setMessage(getRichMessage());
+  }
+
+  function insertCode() {
+    messageInputRef.current?.focus();
+    document.execCommand("insertHTML", false, "<code>code</code>");
+    setMessage(getRichMessage());
+  }
+
+  function clearComposer() {
+    setMessage("");
+
+    if (messageInputRef.current) {
+      messageInputRef.current.innerHTML = "";
+    }
+  }
+
   function handleSend(e) {
     e.preventDefault();
 
-    if (!message.trim() && !selectedFile) return;
+    const plainMessage = getPlainMessage();
+    const richMessage = getRichMessage();
 
-    const shouldFail = message.toLowerCase().includes("fail");
+    if (!plainMessage && !selectedFile) return;
+
+    const shouldFail = plainMessage.toLowerCase().includes("fail");
 
     const newMessage = {
       id: Date.now(),
       channelId: channel.id,
       sender: "Mike",
       initials: "M",
-      text: message || `Shared a file: ${selectedFile.name}`,
+      text: richMessage || `Shared a file: ${selectedFile.name}`,
       fileName: selectedFile?.name || "",
       time: "Just now",
       mine: true,
@@ -64,7 +109,7 @@ function ChannelView({ channel, messages, setMessages }) {
     };
 
     setMessages([...messages, newMessage]);
-    setMessage("");
+    clearComposer();
     setSelectedFile(null);
     setShowEmojiPicker(false);
 
@@ -76,6 +121,13 @@ function ChannelView({ channel, messages, setMessages }) {
           )
         );
       }, 900);
+    }
+  }
+
+  function handleComposerKeyDown(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(e);
     }
   }
 
@@ -96,12 +148,12 @@ function ChannelView({ channel, messages, setMessages }) {
   }
 
   function addEmoji(emoji) {
-    setMessage((current) => `${current}${emoji}`);
+    insertTextAtCursor(emoji);
     setShowEmojiPicker(false);
   }
 
   function insertMention() {
-    setMessage((current) => `${current}@`);
+    insertTextAtCursor("@");
   }
 
   return (
@@ -146,17 +198,39 @@ function ChannelView({ channel, messages, setMessages }) {
 
       <form className="figma-composer" onSubmit={handleSend}>
         <div className="figma-composer-toolbar">
-          <Bold size={14} />
-          <Italic size={14} />
-          <List size={14} />
-          <Code size={14} />
+          <button type="button" aria-label="Bold" onClick={() => runFormat("bold")}>
+            <Bold size={14} />
+          </button>
+
+          <button
+            type="button"
+            aria-label="Italic"
+            onClick={() => runFormat("italic")}
+          >
+            <Italic size={14} />
+          </button>
+
+          <button
+            type="button"
+            aria-label="List"
+            onClick={() => runFormat("insertUnorderedList")}
+          >
+            <List size={14} />
+          </button>
+
+          <button type="button" aria-label="Code" onClick={insertCode}>
+            <Code size={14} />
+          </button>
         </div>
 
-        <input
-          className="figma-composer-message"
-          placeholder={`Message #${channel.name}...`}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
+        <div
+          ref={messageInputRef}
+          className="figma-composer-message rich-message-box"
+          contentEditable
+          data-placeholder={`Message #${channel.name}...`}
+          onInput={() => setMessage(getRichMessage())}
+          onFocus={() => setShowEmojiPicker(false)}
+          onKeyDown={handleComposerKeyDown}
         />
 
         {selectedFile && (
@@ -182,7 +256,10 @@ function ChannelView({ channel, messages, setMessages }) {
               <button
                 type="button"
                 aria-label="Choose emoji"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                onClick={() => {
+                  focusMessageInput();
+                  setShowEmojiPicker(!showEmojiPicker);
+                }}
               >
                 <Smile size={16} />
               </button>

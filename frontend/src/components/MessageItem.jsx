@@ -35,7 +35,10 @@ function MessageItem({ message, onRetry }) {
           )}
         </div>
 
-        <p>{message.text}</p>
+        <div
+          className="message-text"
+          dangerouslySetInnerHTML={{ __html: message.text }}
+        />
 
         {message.fileName && (
           <div className="message-file">Attached file: {message.fileName}</div>

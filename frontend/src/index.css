@@ -2425,3 +2425,41 @@ textarea::placeholder {
   padding: 7px 10px;
   cursor: pointer;
 }
+.rich-message-box {
+  min-height: 72px;
+  outline: none;
+  cursor: text;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+.rich-message-box:empty::before {
+  content: attr(data-placeholder);
+  color: #7c7a92;
+}
+
+.rich-message-box code {
+  background: #dedbf1;
+  color: #312e81;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.message-text {
+  margin: 4px 0 0;
+  color: #1f2337;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.message-text p {
+  margin: 0;
+}
+
+.message-text code {
+  background: #dedbf1;
+  color: #312e81;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
