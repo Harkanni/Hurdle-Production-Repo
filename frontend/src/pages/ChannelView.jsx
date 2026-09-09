@@ -32,6 +32,14 @@ const emojis = [
   "📌",
   "👀",
   "💬",
+  "😎",
+  "😅",
+  "🙏",
+  "🎉",
+  "❤️",
+  "💡",
+  "📎",
+  "⭐",
 ];
 
 function ChannelView({ channel, messages, setMessages }) {
@@ -55,9 +63,7 @@ function ChannelView({ channel, messages, setMessages }) {
   }
 
   function focusMessageInput() {
-    setTimeout(() => {
-      messageInputRef.current?.focus();
-    }, 0);
+    messageInputRef.current?.focus();
   }
 
   function runFormat(command) {
@@ -67,8 +73,35 @@ function ChannelView({ channel, messages, setMessages }) {
   }
 
   function insertTextAtCursor(text) {
-    messageInputRef.current?.focus();
-    document.execCommand("insertText", false, text);
+    const editor = messageInputRef.current;
+
+    if (!editor) return;
+
+    editor.focus();
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      editor.append(text);
+      setMessage(getRichMessage());
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (!editor.contains(range.commonAncestorContainer)) {
+      editor.append(text);
+      setMessage(getRichMessage());
+      return;
+    }
+
+    range.deleteContents();
+    range.insertNode(document.createTextNode(text));
+    range.collapse(false);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+
     setMessage(getRichMessage());
   }
 
@@ -256,9 +289,10 @@ function ChannelView({ channel, messages, setMessages }) {
               <button
                 type="button"
                 aria-label="Choose emoji"
-                onClick={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setShowEmojiPicker((current) => !current);
                   focusMessageInput();
-                  setShowEmojiPicker(!showEmojiPicker);
                 }}
               >
                 <Smile size={16} />
@@ -270,7 +304,10 @@ function ChannelView({ channel, messages, setMessages }) {
                     <button
                       type="button"
                       key={emoji}
-                      onClick={() => addEmoji(emoji)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        addEmoji(emoji);
+                      }}
                     >
                       {emoji}
                     </button>
@@ -282,7 +319,10 @@ function ChannelView({ channel, messages, setMessages }) {
             <button
               type="button"
               aria-label="Mention teammate"
-              onClick={insertMention}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                insertMention();
+              }}
             >
               <AtSign size={16} />
             </button>
