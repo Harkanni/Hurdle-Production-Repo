@@ -11,8 +11,8 @@ import {
 } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('channels')

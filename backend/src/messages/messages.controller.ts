@@ -13,8 +13,8 @@ import {
 import { MessagesService } from './messages.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('channels/:channelId/messages')
