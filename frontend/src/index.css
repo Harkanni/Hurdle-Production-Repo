@@ -2246,3 +2246,156 @@ textarea::placeholder {
     color: #ef4444;
   }
 }
+.password-toggle {
+  border: 0;
+  background: transparent;
+  color: #9b97b5;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.password-toggle:hover {
+  color: #3f33ad;
+}
+/* DMs and Profile views */
+
+.dm-chat-content {
+  padding-top: 54px;
+}
+
+.profile-view {
+  min-height: 100vh;
+  background: #fbfbff;
+  display: grid;
+  place-items: center;
+  padding: 34px;
+}
+
+.profile-panel {
+  width: min(100%, 430px);
+  background: #ffffff;
+  border: 1px solid #e6e3f4;
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(32, 30, 70, 0.05);
+  padding: 28px;
+  text-align: center;
+}
+
+.profile-avatar-large {
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: #eceaf8;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.profile-avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-panel h1 {
+  margin: 0 0 8px;
+  color: #171827;
+  font-size: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+}
+
+.profile-panel > p {
+  margin: 0 0 22px;
+  color: #6d687c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.profile-card {
+  background: #f7f6ff;
+  border: 1px solid #e6e3f4;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.profile-card-header {
+  margin-bottom: 14px;
+}
+
+.profile-card-header strong {
+  display: block;
+  color: #171827;
+  font-size: 12px;
+}
+
+.profile-card-header span {
+  color: #777489;
+  font-size: 10px;
+}
+
+.profile-info-row {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 9px;
+  align-items: center;
+  color: #3f33ad;
+  margin-top: 12px;
+}
+
+.profile-info-row span {
+  display: block;
+  color: #777489;
+  font-size: 10px;
+}
+
+.profile-info-row strong {
+  display: block;
+  color: #171827;
+  font-size: 12px;
+}
+
+.profile-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #514d64;
+  font-size: 11px;
+  margin-top: 12px;
+}
+
+.profile-checkbox-row input {
+  accent-color: #3f33ad;
+}
+
+.profile-logout-btn {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .profile-view {
+    min-height: calc(100vh - 58px);
+    padding: 24px 18px 86px;
+  }
+
+  .profile-panel {
+    box-shadow: none;
+    border-radius: 10px;
+    padding: 22px;
+  }
+
+  .dm-chat-content {
+    padding-top: 34px;
+  }
+}

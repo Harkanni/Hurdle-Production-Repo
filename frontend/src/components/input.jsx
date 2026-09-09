@@ -1,4 +1,4 @@
-import { CheckCircle2, Lock, AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Lock } from "lucide-react";
 
 function Input({
   label,
@@ -6,6 +6,7 @@ function Input({
   isValid = false,
   showLock = false,
   rightText = "",
+  rightIcon = null,
   icon,
   ...props
 }) {
@@ -22,13 +23,15 @@ function Input({
 
         <input {...props} />
 
-        {isValid && !error && (
+        {rightIcon}
+
+        {isValid && !error && !rightIcon && (
           <CheckCircle2 className="valid-icon" size={15} />
         )}
 
         {error && <AlertCircle className="danger-icon" size={15} />}
 
-        {showLock && !isValid && !error && (
+        {showLock && !isValid && !error && !rightIcon && (
           <Lock className="lock-icon" size={14} />
         )}
       </div>

@@ -12,10 +12,12 @@ import {
   UserCircle,
   X,
 } from "lucide-react";
-import Sidebar, { UserBar } from "../components/Sidebar";
+import Sidebar from "../components/Sidebar";
 import ChannelDirectory from "./ChannelDirectory";
 import ChannelView from "./ChannelView";
 import CreateChannelModal from "../components/CreateChannelModal";
+import DMView from "./DMView";
+import ProfileView from "./ProfileView";
 
 function Workspace({
   channels,
@@ -87,6 +89,10 @@ function Workspace({
             }}
             onCreate={() => setShowCreateModal(true)}
           />
+        ) : view === "dms" ? (
+          <DMView />
+        ) : view === "profile" ? (
+          <ProfileView onLogout={requestLogout} />
         ) : activeChannel ? (
           <ChannelView
             channel={activeChannel}
@@ -143,7 +149,12 @@ function Workspace({
   );
 }
 
-function MobileTopControls({ view, setShowMobileAside, setActiveChannel, setView }) {
+function MobileTopControls({
+  view,
+  setShowMobileAside,
+  setActiveChannel,
+  setView,
+}) {
   return (
     <button
       type="button"
@@ -157,7 +168,7 @@ function MobileTopControls({ view, setShowMobileAside, setActiveChannel, setView
         }
       }}
     >
-      {view === "home" ? <Menu size={16} /> : "‹"}
+      {view === "home" ? <Menu size={16} /> : "<"}
     </button>
   );
 }
@@ -187,7 +198,7 @@ function MobileAside({
           <strong>Mike</strong>
           <span>mike@gmail.com</span>
         </div>
-        <span>›</span>
+        <span>{">"}</span>
       </div>
 
       <div className="figma-side-heading">
@@ -419,12 +430,26 @@ function MobileBottomNav({ view, setView, setActiveChannel }) {
         <span>Channel</span>
       </button>
 
-      <button type="button">
+      <button
+        type="button"
+        className={view === "dms" ? "active" : ""}
+        onClick={() => {
+          setActiveChannel(null);
+          setView("dms");
+        }}
+      >
         <MessageCircle size={16} />
         <span>DMs</span>
       </button>
 
-      <button type="button">
+      <button
+        type="button"
+        className={view === "profile" ? "active" : ""}
+        onClick={() => {
+          setActiveChannel(null);
+          setView("profile");
+        }}
+      >
         <UserCircle size={16} />
         <span>Profile</span>
       </button>

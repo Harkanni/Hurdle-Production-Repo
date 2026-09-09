@@ -3,6 +3,8 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
+  Eye,
+  EyeOff,
   Loader2,
   Lock,
   Mail,
@@ -14,6 +16,7 @@ function Login({ onRegister, onSuccess }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [status, setStatus] = useState("idle");
+  const [showPassword, setShowPassword] = useState(false);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -92,17 +95,33 @@ function Login({ onRegister, onSuccess }) {
           placeholder="mike@example.com"
           value={form.email}
           icon={<Mail size={14} />}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          onChange={(e) => {
+            setForm({ ...form, email: e.target.value });
+            setError("");
+          }}
         />
 
         <Input
           label="Password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="password123"
           value={form.password}
           icon={<Lock size={14} />}
-          hint="Forgot password?"
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          rightText="Forgot password?"
+          rightIcon={
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          }
+          onChange={(e) => {
+            setForm({ ...form, password: e.target.value });
+            setError("");
+          }}
         />
 
         <label className="checkbox-line">
@@ -124,7 +143,7 @@ function Login({ onRegister, onSuccess }) {
         </button>
 
         <div className="auth-bottom">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <button type="button" onClick={onRegister}>
             Create Account
           </button>
