@@ -7,10 +7,29 @@ function Sidebar({
   view,
   setView,
   setActiveChannel,
+  searchTerm,
+  setSearchTerm,
+  onJoin,
   onCreate,
   onLogout,
 }) {
+  const isSearching = searchTerm.trim().length > 0;
   const joinedChannels = channels.filter((channel) => channel.joined);
+
+  function openJoinedChannel(channel) {
+    setActiveChannel(channel);
+    setSearchTerm("");
+    setView("channel");
+  }
+
+  function handleJoinChannel(e, channelId) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (onJoin) {
+      onJoin(channelId);
+    }
+  }
 
   return (
     <aside className="figma-sidebar">
@@ -20,8 +39,10 @@ function Sidebar({
 
       <button
         className="figma-workspace-card"
+        type="button"
         onClick={() => {
           setActiveChannel(null);
+          setSearchTerm("");
           setView("home");
         }}
       >
@@ -39,22 +60,68 @@ function Sidebar({
         <small>⌄</small>
       </button>
 
-      {joinedChannels.length > 0 && (
-        <div className="figma-jump-search">
-          <Search size={13} />
-          <input placeholder="Jump to channel..." />
-          <kbd>⌘K</kbd>
-        </div>
-      )}
+      <div className="figma-jump-search">
+        <Search size={13} />
+        <input
+          type="text"
+          placeholder="Jump to channel..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <kbd>⌘K</kbd>
+      </div>
 
       <div className="figma-side-heading">
-        <span>CHANNELS</span>
+        <span>{isSearching ? "SEARCH RESULTS" : "CHANNELS"}</span>
         <button type="button" onClick={onCreate}>
           <Plus size={13} />
         </button>
       </div>
 
-      {joinedChannels.length === 0 ? (
+      {isSearching ? (
+        channels.length === 0 ? (
+          <div className="no-joined-card">
+            <span>This channel does not exist</span>
+            <button type="button" onClick={() => setSearchTerm("")}>
+              Clear search
+            </button>
+          </div>
+        ) : (
+          <nav className="figma-channel-list">
+            {channels.map((channel) => (
+              <div key={channel.id} className="figma-search-channel">
+                <button
+                  type="button"
+                  className={
+                    activeChannel?.id === channel.id && view === "channel"
+                      ? "figma-channel active"
+                      : "figma-channel"
+                  }
+                  onClick={() => {
+                    if (channel.joined) {
+                      openJoinedChannel(channel);
+                    }
+                  }}
+                >
+                  <Hash size={12} />
+                  {channel.name}
+                  {!channel.joined && <small>Join first</small>}
+                </button>
+
+                {!channel.joined && (
+                  <button
+                    type="button"
+                    className="sidebar-join-btn"
+                    onClick={(e) => handleJoinChannel(e, channel.id)}
+                  >
+                    Join
+                  </button>
+                )}
+              </div>
+            ))}
+          </nav>
+        )
+      ) : joinedChannels.length === 0 ? (
         <div className="no-joined-card">
           <span>No channels joined yet</span>
           <button type="button" onClick={() => setView("directory")}>
@@ -66,15 +133,13 @@ function Sidebar({
           {joinedChannels.map((channel) => (
             <button
               key={channel.id}
+              type="button"
               className={
                 activeChannel?.id === channel.id && view === "channel"
                   ? "figma-channel active"
                   : "figma-channel"
               }
-              onClick={() => {
-                setActiveChannel(channel);
-                setView("channel");
-              }}
+              onClick={() => openJoinedChannel(channel)}
             >
               <Hash size={12} />
               {channel.name}
@@ -89,8 +154,12 @@ function Sidebar({
           <span>EXPLORE</span>
 
           <button
+            type="button"
             className={view === "directory" ? "active" : ""}
-            onClick={() => setView("directory")}
+            onClick={() => {
+              setSearchTerm("");
+              setView("directory");
+            }}
           >
             <Search size={12} />
             Channel Directory

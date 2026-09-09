@@ -2399,3 +2399,29 @@ textarea::placeholder {
     padding-top: 34px;
   }
 }
+.figma-search-channel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.figma-search-channel .figma-channel {
+  flex: 1;
+}
+
+.figma-search-channel small {
+  margin-left: auto;
+  font-size: 10px;
+  color: #7c74a8;
+}
+
+.sidebar-join-btn {
+  border: 0;
+  border-radius: 6px;
+  background: #4338ca;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 10px;
+  cursor: pointer;
+}

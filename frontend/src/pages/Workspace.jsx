@@ -32,6 +32,11 @@ function Workspace({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMobileAside, setShowMobileAside] = useState(false);
   const [showSignOut, setShowSignOut] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredChannels = channels.filter((channel) =>
+    channel.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
 
   const joinedChannels = channels.filter((channel) => channel.joined);
 
@@ -42,6 +47,13 @@ function Workspace({
   function confirmLogout() {
     setShowSignOut(false);
     onLogout();
+  }
+
+  function openChannel(channel) {
+    setActiveChannel(channel);
+    setView("channel");
+    setSearchTerm("");
+    setShowMobileAside(false);
   }
 
   function joinChannel(channelId) {
@@ -56,17 +68,21 @@ function Workspace({
     setChannels(updatedChannels);
     setActiveChannel(selectedChannel);
     setView("channel");
+    setSearchTerm("");
     setShowMobileAside(false);
   }
 
   return (
     <div className="figma-shell">
       <Sidebar
-        channels={channels}
+        channels={filteredChannels}
         activeChannel={activeChannel}
         view={view}
         setView={setView}
         setActiveChannel={setActiveChannel}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        onJoin={joinChannel}
         onCreate={() => setShowCreateModal(true)}
         onLogout={requestLogout}
       />
@@ -83,10 +99,7 @@ function Workspace({
           <ChannelDirectory
             channels={channels}
             onJoin={joinChannel}
-            onOpen={(channel) => {
-              setActiveChannel(channel);
-              setView("channel");
-            }}
+            onOpen={openChannel}
             onCreate={() => setShowCreateModal(true)}
           />
         ) : view === "dms" ? (
@@ -114,15 +127,18 @@ function Workspace({
           view={view}
           setView={setView}
           setActiveChannel={setActiveChannel}
+          setSearchTerm={setSearchTerm}
         />
       </main>
 
       {showMobileAside && (
         <MobileAside
-          channels={channels}
+          channels={filteredChannels}
           activeChannel={activeChannel}
-          setActiveChannel={setActiveChannel}
-          setView={setView}
+          openChannel={openChannel}
+          onJoin={joinChannel}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
           onCreate={() => setShowCreateModal(true)}
           onClose={() => setShowMobileAside(false)}
           onLogout={requestLogout}
@@ -176,12 +192,16 @@ function MobileTopControls({
 function MobileAside({
   channels,
   activeChannel,
-  setActiveChannel,
-  setView,
+  openChannel,
+  onJoin,
+  searchTerm,
+  setSearchTerm,
   onCreate,
   onClose,
   onLogout,
 }) {
+  const isSearching = searchTerm.trim().length > 0;
+
   return (
     <aside className="mobile-aside-panel">
       <div className="mobile-aside-head">
@@ -201,32 +221,69 @@ function MobileAside({
         <span>{">"}</span>
       </div>
 
+      <div className="figma-search">
+        <Search size={13} />
+        <input
+          type="text"
+          placeholder="Jump to channel..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <kbd>⌘K</kbd>
+      </div>
+
       <div className="figma-side-heading">
-        <span>CHANNELS</span>
+        <span>{isSearching ? "SEARCH RESULTS" : "CHANNELS"}</span>
         <button type="button" onClick={onCreate}>
           <Plus size={13} />
         </button>
       </div>
 
       <nav className="figma-channel-list">
-        {channels.map((channel) => (
-          <button
-            key={channel.id}
-            className={
-              activeChannel?.id === channel.id
-                ? "figma-channel active"
-                : "figma-channel"
-            }
-            onClick={() => {
-              setActiveChannel(channel);
-              setView("channel");
-              onClose();
-            }}
-          >
-            <Hash size={12} />
-            {channel.name}
-          </button>
-        ))}
+        {channels.length > 0 ? (
+          channels.map((channel) => (
+            <div key={channel.id} className="figma-search-channel">
+              <button
+                type="button"
+                className={
+                  activeChannel?.id === channel.id
+                    ? "figma-channel active"
+                    : "figma-channel"
+                }
+                onClick={() => {
+                  if (channel.joined) {
+                    openChannel(channel);
+                  }
+                }}
+              >
+                <Hash size={12} />
+                {channel.name}
+                {!channel.joined && <small>Join first</small>}
+              </button>
+
+              {!channel.joined && (
+                <button
+                  type="button"
+                  className="sidebar-join-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onJoin(channel.id);
+                  }}
+                >
+                  Join
+                </button>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="no-joined-card">
+            <span>This channel does not exist</span>
+            <button type="button" onClick={() => setSearchTerm("")}>
+              Clear search
+            </button>
+          </div>
+        )}
       </nav>
 
       <div className="mobile-aside-footer">
@@ -406,7 +463,7 @@ function NoChannelSelected({ onBrowse }) {
   );
 }
 
-function MobileBottomNav({ view, setView, setActiveChannel }) {
+function MobileBottomNav({ view, setView, setActiveChannel, setSearchTerm }) {
   return (
     <nav className="mobile-bottom-nav">
       <button
@@ -414,6 +471,7 @@ function MobileBottomNav({ view, setView, setActiveChannel }) {
         className={view === "home" ? "active" : ""}
         onClick={() => {
           setActiveChannel(null);
+          setSearchTerm("");
           setView("home");
         }}
       >
@@ -424,7 +482,10 @@ function MobileBottomNav({ view, setView, setActiveChannel }) {
       <button
         type="button"
         className={view === "directory" || view === "channel" ? "active" : ""}
-        onClick={() => setView("directory")}
+        onClick={() => {
+          setSearchTerm("");
+          setView("directory");
+        }}
       >
         <Hash size={16} />
         <span>Channel</span>
@@ -435,6 +496,7 @@ function MobileBottomNav({ view, setView, setActiveChannel }) {
         className={view === "dms" ? "active" : ""}
         onClick={() => {
           setActiveChannel(null);
+          setSearchTerm("");
           setView("dms");
         }}
       >
@@ -447,6 +509,7 @@ function MobileBottomNav({ view, setView, setActiveChannel }) {
         className={view === "profile" ? "active" : ""}
         onClick={() => {
           setActiveChannel(null);
+          setSearchTerm("");
           setView("profile");
         }}
       >
