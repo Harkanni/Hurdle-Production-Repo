@@ -27,4 +27,4 @@ services:
     # plan: free
     envVars:
       - key: VITE_API_URL
-        value: https://hurdle-backend.onrender.com
+        value: https://hurdle-backend-ewnp.onrender.com
