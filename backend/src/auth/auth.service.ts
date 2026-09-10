@@ -57,7 +57,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const token = this.jwtService.sign({ userId: user._id });
+    const token = this.jwtService.sign({ 
+      userId: user._id,
+      sub: user._id,
+      username: user.displayName
+    });
 
     return {
       token,
