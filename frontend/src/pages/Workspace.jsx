@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Hash,
   Home,
@@ -26,8 +27,8 @@ function Workspace({
   setActiveChannel,
   messages,
   setMessages,
-  onLogout,
 }) {
+  const navigate = useNavigate();
   const [view, setView] = useState("home");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMobileAside, setShowMobileAside] = useState(false);
@@ -35,7 +36,7 @@ function Workspace({
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredChannels = channels.filter((channel) =>
-    channel.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+    channel.name.toLowerCase().includes(searchTerm.trim().toLowerCase()),
   );
 
   const joinedChannels = channels.filter((channel) => channel.joined);
@@ -46,7 +47,9 @@ function Workspace({
 
   function confirmLogout() {
     setShowSignOut(false);
-    onLogout();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
   }
 
   function openChannel(channel) {
@@ -58,11 +61,11 @@ function Workspace({
 
   function joinChannel(channelId) {
     const updatedChannels = channels.map((channel) =>
-      channel.id === channelId ? { ...channel, joined: true } : channel
+      channel.id === channelId ? { ...channel, joined: true } : channel,
     );
 
     const selectedChannel = updatedChannels.find(
-      (channel) => channel.id === channelId
+      (channel) => channel.id === channelId,
     );
 
     setChannels(updatedChannels);
@@ -340,7 +343,7 @@ function SignOutModal({ onCancel, onConfirm }) {
 
 function NoChannelsJoined({ channels, onJoin, onBrowse, onCreate }) {
   const recommended = channels.filter(
-    (channel) => channel.name === "general" || channel.name === "announcements"
+    (channel) => channel.name === "general" || channel.name === "announcements",
   );
 
   return (
