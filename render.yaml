@@ -3,7 +3,7 @@ services:
     name: hurdle-backend
     runtime: node
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: node server.js
     plan: free
     envVars:
@@ -18,7 +18,7 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    plan: free
+    # plan: free
     envVars:
       - key: VITE_API_URL
         value: https://hurdle-backend.onrender.com
