@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
@@ -10,7 +11,8 @@ import {
 import Input from "../components/Input";
 import Logo from "../components/Logo";
 
-function Register({ onLogin }) {
+function Register() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -20,10 +22,11 @@ function Register({ onLogin }) {
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [status, setStatus] = useState("idle");
+  const [serverError, setServerError] = useState("");
 
   const nameValid = form.name.trim().length >= 2;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const passwordValid = form.password.length >= 8;
+  const passwordValid = form.password.length >= 6; // matches backend MinLength(6)
 
   function updateField(field, value) {
     setForm({ ...form, [field]: value });
@@ -44,20 +47,17 @@ function Register({ onLogin }) {
       nextErrors.email = "Invalid format";
     }
 
-    if (values.password.length < 8) {
+    if (values.password.length < 6) {
       nextErrors.password = "Too short";
-    }
-
-    if (values.email.trim().toLowerCase() === "mike@example.com") {
-      nextErrors.email = "Email registered";
     }
 
     return nextErrors;
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setSubmitted(true);
+    setServerError("");
 
     const nextErrors = validateForm(form);
     setErrors(nextErrors);
@@ -66,9 +66,32 @@ function Register({ onLogin }) {
 
     setStatus("loading");
 
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          displayName: form.name.trim(),
+        }),
+      });
+
+      if (res.status === 409) {
+        setErrors({ email: "Email registered" });
+        setStatus("idle");
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error("Registration failed");
+      }
+
       setStatus("success");
-    }, 900);
+    } catch (err) {
+      setServerError("Something went wrong. Please try again.");
+      setStatus("idle");
+    }
   }
 
   if (status === "success") {
@@ -98,7 +121,10 @@ function Register({ onLogin }) {
             <small>Active</small>
           </div>
 
-          <button className="primary-btn full" onClick={onLogin}>
+          <button
+            className="primary-btn full"
+            onClick={() => navigate("/login")}
+          >
             Continue to sign in <ArrowRight size={15} />
           </button>
 
@@ -121,6 +147,8 @@ function Register({ onLogin }) {
             {Object.keys(errors).length} validation errors require attention
           </div>
         )}
+
+        {serverError && <div className="error-banner">{serverError}</div>}
 
         <div className="auth-title">
           <h1>Create your Huddle account</h1>
@@ -152,7 +180,7 @@ function Register({ onLogin }) {
         <Input
           label="Password"
           type="password"
-          placeholder="Must be at least 8 characters"
+          placeholder="Must be at least 6 characters"
           value={form.password}
           error={submitted ? errors.password : ""}
           isValid={passwordValid}
@@ -181,7 +209,7 @@ function Register({ onLogin }) {
 
         <div className="auth-bottom">
           Already have an account?{" "}
-          <button type="button" onClick={onLogin}>
+          <button type="button" onClick={() => navigate("/login")}>
             Sign In
           </button>
         </div>

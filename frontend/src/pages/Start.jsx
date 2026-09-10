@@ -1,7 +1,15 @@
+import { useNavigate, Navigate } from "react-router-dom";
 import { LogIn, UserPlus } from "lucide-react";
 import Logo from "../components/Logo";
 
-function Start({ onCreateAccount, onSignIn }) {
+function Start() {
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    return <Navigate to="/workspace" replace />;
+  }
+
   return (
     <main className="auth-screen">
       <section className="start-header">
@@ -12,12 +20,12 @@ function Start({ onCreateAccount, onSignIn }) {
 
       <section className="start-card start-choice-card">
         <div className="start-tabs">
-          <button type="button" onClick={onCreateAccount}>
+          <button type="button" onClick={() => navigate("/register")}>
             <UserPlus size={13} />
             Create Account
           </button>
 
-          <button type="button" onClick={onSignIn}>
+          <button type="button" onClick={() => navigate("/login")}>
             <LogIn size={13} />
             Sign In
           </button>

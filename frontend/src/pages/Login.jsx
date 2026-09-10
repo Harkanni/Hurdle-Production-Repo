@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   ArrowRight,
@@ -12,13 +13,14 @@ import {
 import Input from "../components/Input";
 import Logo from "../components/Logo";
 
-function Login({ onRegister, onSuccess }) {
+function Login() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [status, setStatus] = useState("idle");
   const [showPassword, setShowPassword] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
 
@@ -32,9 +34,27 @@ function Login({ onRegister, onSuccess }) {
 
     setStatus("loading");
 
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      const data = await res.json();
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       setStatus("success");
-    }, 800);
+    } catch (err) {
+      setError("Incorrect email or password. Please try again.");
+      setStatus("idle");
+    }
   }
 
   if (status === "success") {
@@ -61,7 +81,10 @@ function Login({ onRegister, onSuccess }) {
             <small>Active</small>
           </div>
 
-          <button className="primary-btn full" onClick={onSuccess}>
+          <button
+            className="primary-btn full"
+            onClick={() => navigate("/workspace")}
+          >
             Continue to workspace <ArrowRight size={15} />
           </button>
 
@@ -144,7 +167,7 @@ function Login({ onRegister, onSuccess }) {
 
         <div className="auth-bottom">
           Don&apos;t have an account?{" "}
-          <button type="button" onClick={onRegister}>
+          <button type="button" onClick={() => navigate("/register")}>
             Create Account
           </button>
         </div>
