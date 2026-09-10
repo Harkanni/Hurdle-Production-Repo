@@ -1,0 +1,61 @@
+export const initialChannels = [
+  {
+    id: 1,
+    name: "general",
+    description: "Company-wide discussions, announcements, and team updates.",
+    joined: false,
+    members: 12,
+    badge: "Default",
+    updated: "Active now",
+  },
+  {
+    id: 2,
+    name: "product",
+    description: "Product roadmap discussions, feature specs, and feedback synthesis.",
+    joined: false,
+    members: 8,
+    badge: "",
+    updated: "updated 2 ago",
+  },
+  {
+    id: 3,
+    name: "design",
+    description: "Design system updates, UI critique, and prototype explorations.",
+    joined: false,
+    members: 5,
+    badge: "",
+    updated: "updated 10m ago",
+  },
+  {
+    id: 4,
+    name: "announcements",
+    description: "Official team news, releases, and leadership announcements",
+    joined: false,
+    members: 20,
+    badge: "Broadcast",
+    updated: "updated 1d ago",
+  },
+];
+
+export const initialMessages = [
+  {
+    id: 1,
+    channelId: 1,
+    sender: "Marcus Chen",
+    initials: "MC",
+    text: "Morning team! Just pushed the updated roadmap for sprint 4. Please take a look when you have a moment.",
+    time: "10:14 AM",
+    mine: false,
+    status: "sent",
+  },
+  {
+    id: 2,
+    channelId: 1,
+    sender: "Elena Rostova",
+    initials: "ER",
+    text: "Looks solid Marcus. The client onboarding milestones are well defined.",
+    time: "10:18 AM",
+    mine: false,
+    status: "sent",
+  },
+];
