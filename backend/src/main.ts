@@ -15,7 +15,11 @@ async function bootstrap() {
   }));
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: [
+      'http://localhost:5173', // Your Vite dev server
+      'http://localhost:3000', // Local backend
+      'https://hurdle-frontend-ewnp.onrender.com', // Hosted Render website
+    ],
     credentials: true,
   });
 
