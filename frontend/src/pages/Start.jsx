@@ -1,9 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { LogIn, UserPlus } from "lucide-react";
 import Logo from "../components/Logo";
 
 function Start() {
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    return <Navigate to="/workspace" replace />;
+  }
 
   return (
     <main className="auth-screen">
