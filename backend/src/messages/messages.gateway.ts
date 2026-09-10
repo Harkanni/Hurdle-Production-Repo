@@ -50,8 +50,9 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
         process.env.JWT_SECRET || 'hurdle_jwt_secret_change_in_production',
       ) as any;
 
-      client.userId = payload.sub;
-      client.username = payload.username;
+      // Normalize: support both sub and userId in the token payload
+      client.userId = (payload.userId ?? payload.sub)?.toString();
+      client.username = payload.username ?? '';
 
       this.logger.log(`Client connected: ${client.id} (user: ${client.username})`);
       client.emit('connected', { message: 'Successfully connected to Hurdle chat' });
