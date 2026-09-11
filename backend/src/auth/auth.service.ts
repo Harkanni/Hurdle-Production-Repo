@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -16,6 +17,8 @@ const SALT_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
@@ -23,9 +26,11 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase();
+    this.logger.log(`Register attempt for email: ${email}`);
 
     const existing = await this.userModel.findOne({ email });
     if (existing) {
+      this.logger.warn(`Registration failed — email already exists: ${email}`);
       throw new ConflictException('An account with this email already exists');
     }
 
@@ -37,6 +42,7 @@ export class AuthService {
       displayName: dto.displayName || email.split('@')[0],
     });
 
+    this.logger.log(`New user registered: ${email} (id: ${user._id})`);
     return {
       id: user._id,
       email: user.email,
@@ -46,14 +52,17 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase();
+    this.logger.log(`Login attempt for email: ${email}`);
 
     const user = await this.userModel.findOne({ email });
     if (!user) {
+      this.logger.warn(`Login failed — no account found for: ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
+      this.logger.warn(`Login failed — wrong password for: ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -63,6 +72,7 @@ export class AuthService {
       username: user.displayName
     });
 
+    this.logger.log(`Login successful for: ${email} (id: ${user._id})`);
     return {
       token,
       user: {

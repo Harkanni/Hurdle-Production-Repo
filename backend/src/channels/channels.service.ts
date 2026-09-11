@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -11,14 +12,18 @@ import { Channel, ChannelDocument } from './schemas/channel.schema.js';
 
 @Injectable()
 export class ChannelsService {
+  private readonly logger = new Logger(ChannelsService.name);
+
   constructor(
     @InjectModel(Channel.name) private channelModel: Model<ChannelDocument>,
   ) {}
 
   // ─── Create Channel ────────────────────────────────────────────────────────
   async createChannel(dto: CreateChannelDto, userId: string) {
+    this.logger.log(`User ${userId} is creating channel: "${dto.name}"`);
     const existing = await this.channelModel.findOne({ name: dto.name });
     if (existing) {
+      this.logger.warn(`Channel creation failed — "${dto.name}" already exists`);
       throw new ConflictException(`Channel with name "${dto.name}" already exists`);
     }
 
@@ -29,6 +34,7 @@ export class ChannelsService {
       members: [{ userId: new Types.ObjectId(userId) }],
     });
 
+    this.logger.log(`Channel "${dto.name}" created (id: ${newChannel._id})`);
     return this.formatChannel(newChannel);
   }
 
@@ -97,12 +103,14 @@ export class ChannelsService {
     );
 
     if (isMember) {
+      this.logger.warn(`User ${userId} tried to join channel ${channelId} but is already a member`);
       throw new ConflictException('You are already a member of this channel');
     }
 
     channel.members.push({ userId: new Types.ObjectId(userId), joinedAt: new Date() });
     await channel.save();
 
+    this.logger.log(`User ${userId} joined channel "${channel.name}" (${channelId})`);
     return {
       message: `Successfully joined channel "${channel.name}"`,
       channelId: channel._id,
