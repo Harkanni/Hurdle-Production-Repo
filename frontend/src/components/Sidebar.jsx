@@ -3,10 +3,13 @@ import Logo from "./Logo";
 
 function Sidebar({
   channels,
-  activeChannel,
+  activeChannelId,
   view,
-  setView,
-  setActiveChannel,
+  onNavigateHome,
+  onNavigateDirectory,
+  onNavigateDMs,
+  onNavigateProfile,
+  onOpenChannel,
   searchTerm,
   setSearchTerm,
   onJoin,
@@ -14,13 +17,8 @@ function Sidebar({
   onLogout,
 }) {
   const isSearching = searchTerm.trim().length > 0;
-  const joinedChannels = channels.filter((channel) => channel.joined);
-
-  function openJoinedChannel(channel) {
-    setActiveChannel(channel);
-    setSearchTerm("");
-    setView("channel");
-  }
+  const joinedChannels = channels.filter((channel) => channel.isMember);
+  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
 
   function handleJoinChannel(e, channelId) {
     e.preventDefault();
@@ -37,15 +35,7 @@ function Sidebar({
         <Logo small />
       </div>
 
-      <button
-        className="figma-workspace-card"
-        type="button"
-        onClick={() => {
-          setActiveChannel(null);
-          setSearchTerm("");
-          setView("home");
-        }}
-      >
+      <button className="figma-workspace-card" type="button" onClick={onNavigateHome}>
         <div className="figma-workspace-icon">⌘</div>
 
         <div>
@@ -93,22 +83,22 @@ function Sidebar({
                 <button
                   type="button"
                   className={
-                    activeChannel?.id === channel.id && view === "channel"
+                    activeChannelId === channel.id && view === "channel"
                       ? "figma-channel active"
                       : "figma-channel"
                   }
                   onClick={() => {
-                    if (channel.joined) {
-                      openJoinedChannel(channel);
+                    if (channel.isMember) {
+                      onOpenChannel(channel);
                     }
                   }}
                 >
                   <Hash size={12} />
                   {channel.name}
-                  {!channel.joined && <small>Join first</small>}
+                  {!channel.isMember && <small>Join first</small>}
                 </button>
 
-                {!channel.joined && (
+                {!channel.isMember && (
                   <button
                     type="button"
                     className="sidebar-join-btn"
@@ -124,7 +114,7 @@ function Sidebar({
       ) : joinedChannels.length === 0 ? (
         <div className="no-joined-card">
           <span>No channels joined yet</span>
-          <button type="button" onClick={() => setView("directory")}>
+          <button type="button" onClick={onNavigateDirectory}>
             Browse directory
           </button>
         </div>
@@ -135,15 +125,15 @@ function Sidebar({
               key={channel.id}
               type="button"
               className={
-                activeChannel?.id === channel.id && view === "channel"
+                activeChannelId === channel.id && view === "channel"
                   ? "figma-channel active"
                   : "figma-channel"
               }
-              onClick={() => openJoinedChannel(channel)}
+              onClick={() => onOpenChannel(channel)}
             >
               <Hash size={12} />
               {channel.name}
-              {activeChannel?.id === channel.id && view === "channel" && <i />}
+              {activeChannelId === channel.id && view === "channel" && <i />}
             </button>
           ))}
         </nav>
@@ -156,10 +146,7 @@ function Sidebar({
           <button
             type="button"
             className={view === "directory" ? "active" : ""}
-            onClick={() => {
-              setSearchTerm("");
-              setView("directory");
-            }}
+            onClick={onNavigateDirectory}
           >
             <Search size={12} />
             Channel Directory
@@ -167,22 +154,18 @@ function Sidebar({
         </div>
       )}
 
-      <UserBar onLogout={onLogout} />
+      <UserBar onLogout={onLogout} user={currentUser} />
     </aside>
   );
 }
 
-export function UserBar({ onLogout }) {
+export function UserBar({ onLogout, user }) {
   return (
     <div className="figma-side-user">
-      <img
-        className="figma-user-avatar"
-        src="/images/mike.png"
-        alt="Mike profile"
-      />
+      <img className="figma-user-avatar" src="/images/mike.png" alt="Profile" />
 
       <div>
-        <strong>Mike</strong>
+        <strong>{user?.displayName || "Me"}</strong>
         <span>Online</span>
       </div>
 

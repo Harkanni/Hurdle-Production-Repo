@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useOutletContext } from "react-router-dom";
 import {
   AtSign,
   Bold,
@@ -14,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import MessageItem from "../components/MessageItem";
+import { apiFetch } from "../lib/apiFetch";
 
 const emojis = [
   "😀",
@@ -42,7 +44,47 @@ const emojis = [
   "⭐",
 ];
 
-function ChannelView({ channel, messages, setMessages }) {
+const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+
+// Adapts a backend message object into the shape MessageItem expects.
+// Field names here are best-guess pending the real Message schema —
+// see flagged assumptions in chat.
+function mapMessage(msg) {
+  const id = String(msg.id || msg._id);
+  const senderId = String(
+    msg.senderId || msg.sender?.id || msg.sender?._id || "",
+  );
+  const isMine = currentUser && senderId === String(currentUser.id);
+
+  const senderName = isMine
+    ? currentUser.displayName
+    : msg.sender?.displayName || msg.senderName || "Unknown";
+
+  return {
+    id,
+    channelId: msg.channelId,
+    sender: senderName,
+    initials: senderName.slice(0, 1).toUpperCase(),
+    text: msg.content,
+    fileName: msg.fileName || "",
+    time: msg.createdAt
+      ? new Date(msg.createdAt).toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "Just now",
+    mine: isMine,
+    status: "sent",
+  };
+}
+
+function ChannelView() {
+  const { channelId } = useParams();
+  const { channels, socket } = useOutletContext();
+  const channel = channels.find((c) => c.id === channelId);
+
+  const [messages, setMessages] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -50,9 +92,66 @@ function ChannelView({ channel, messages, setMessages }) {
   const fileInputRef = useRef(null);
   const messageInputRef = useRef(null);
 
-  const channelMessages = messages.filter(
-    (item) => item.channelId === channel.id
-  );
+  // Load message history for this channel
+  useEffect(() => {
+    setLoadingMessages(true);
+    apiFetch(`/api/channels/${channelId}/messages`)
+      .then((data) => {
+        // Handles either a bare array or an enveloped { messages, nextCursor } shape.
+        // Confirm the real envelope once the Messages controller is shared.
+        const list = Array.isArray(data) ? data : data.messages || [];
+        setMessages(list.map(mapMessage));
+      })
+      .catch((err) => console.error("Failed to load messages:", err))
+      .finally(() => setLoadingMessages(false));
+  }, [channelId]);
+
+  // Join the socket room for this channel, listen for live events
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.emit("join_channel", { channelId });
+
+    function onNewMessage(raw) {
+      if (raw.channelId !== channelId) return;
+      const mapped = mapMessage(raw);
+
+      setMessages((prev) => {
+        // Already have this exact real id? Skip.
+        if (prev.some((m) => m.id === mapped.id)) return prev;
+
+        // Is there a pending optimistic message (still "temp-...") from us,
+        // with the same text, waiting to be reconciled? If so, replace it
+        // instead of appending a second copy.
+        const pendingIndex = prev.findIndex(
+          (m) => m.id.startsWith("temp-") && m.mine && m.text === mapped.text,
+        );
+
+        if (pendingIndex !== -1) {
+          const next = [...prev];
+          next[pendingIndex] = mapped;
+          return next;
+        }
+
+        return [...prev, mapped];
+      });
+    }
+
+    function onMessageDeleted({ messageId, channelId: c }) {
+      if (c !== channelId) return;
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    }
+
+    socket.on("new_message", onNewMessage);
+    socket.on("message_deleted", onMessageDeleted);
+    socket.on("error", (err) => console.error("Socket error:", err.message));
+
+    return () => {
+      socket.emit("leave_channel", { channelId });
+      socket.off("new_message", onNewMessage);
+      socket.off("message_deleted", onMessageDeleted);
+    };
+  }, [socket, channelId]);
 
   function getPlainMessage() {
     return messageInputRef.current?.innerText.trim() || "";
@@ -74,13 +173,10 @@ function ChannelView({ channel, messages, setMessages }) {
 
   function insertTextAtCursor(text) {
     const editor = messageInputRef.current;
-
     if (!editor) return;
-
     editor.focus();
 
     const selection = window.getSelection();
-
     if (!selection || selection.rangeCount === 0) {
       editor.append(text);
       setMessage(getRichMessage());
@@ -88,7 +184,6 @@ function ChannelView({ channel, messages, setMessages }) {
     }
 
     const range = selection.getRangeAt(0);
-
     if (!editor.contains(range.commonAncestorContainer)) {
       editor.append(text);
       setMessage(getRichMessage());
@@ -98,10 +193,8 @@ function ChannelView({ channel, messages, setMessages }) {
     range.deleteContents();
     range.insertNode(document.createTextNode(text));
     range.collapse(false);
-
     selection.removeAllRanges();
     selection.addRange(range);
-
     setMessage(getRichMessage());
   }
 
@@ -113,13 +206,12 @@ function ChannelView({ channel, messages, setMessages }) {
 
   function clearComposer() {
     setMessage("");
-
     if (messageInputRef.current) {
       messageInputRef.current.innerHTML = "";
     }
   }
 
-  function handleSend(e) {
+  async function handleSend(e) {
     e.preventDefault();
 
     const plainMessage = getPlainMessage();
@@ -127,33 +219,54 @@ function ChannelView({ channel, messages, setMessages }) {
 
     if (!plainMessage && !selectedFile) return;
 
-    const shouldFail = plainMessage.toLowerCase().includes("fail");
+    // NOTE: file attachment is not yet wired to any backend endpoint —
+    // there's no documented upload route. Sending text only for now;
+    // flag to BE if file/image messages are in scope.
+    if (selectedFile) {
+      console.warn(
+        "File attachment selected but no backend upload endpoint is wired yet.",
+      );
+    }
 
-    const newMessage = {
-      id: Date.now(),
-      channelId: channel.id,
-      sender: "Mike",
-      initials: "M",
-      text: richMessage || `Shared a file: ${selectedFile.name}`,
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
+      channelId,
+      sender: currentUser?.displayName || "Me",
+      initials: (currentUser?.displayName || "M").slice(0, 1).toUpperCase(),
+      text: richMessage,
       fileName: selectedFile?.name || "",
       time: "Just now",
       mine: true,
-      status: shouldFail ? "failed" : "sending",
+      status: "sending",
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages((prev) => [...prev, optimisticMessage]);
     clearComposer();
     setSelectedFile(null);
     setShowEmojiPicker(false);
 
-    if (!shouldFail) {
-      setTimeout(() => {
-        setMessages((current) =>
-          current.map((item) =>
-            item.id === newMessage.id ? { ...item, status: "sent" } : item
-          )
-        );
-      }, 900);
+    try {
+      const created = await apiFetch(`/api/channels/${channelId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ content: plainMessage }),
+      });
+
+      const mapped = mapMessage(created);
+
+      setMessages((prev) => {
+        // If the socket echo already replaced our temp message (arrived first),
+        // the tempId is gone and the real id is already present — don't add again.
+        if (prev.some((m) => m.id === mapped.id)) return prev;
+
+        // Otherwise, replace our temp entry with the confirmed real message.
+        return prev.map((m) => (m.id === tempId ? mapped : m));
+      });
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m)),
+      );
     }
   }
 
@@ -164,20 +277,28 @@ function ChannelView({ channel, messages, setMessages }) {
     }
   }
 
-  function retryMessage(id) {
-    setMessages((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, status: "sending" } : item
-      )
+  async function retryMessage(id) {
+    const failed = messages.find((m) => m.id === id);
+    if (!failed) return;
+
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, status: "sending" } : m)),
     );
 
-    setTimeout(() => {
-      setMessages((current) =>
-        current.map((item) =>
-          item.id === id ? { ...item, status: "sent" } : item
-        )
+    try {
+      const created = await apiFetch(`/api/channels/${channelId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ content: failed.text }),
+      });
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? mapMessage(created) : m)),
       );
-    }, 900);
+    } catch (err) {
+      console.error("Retry failed:", err);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, status: "failed" } : m)),
+      );
+    }
   }
 
   function addEmoji(emoji) {
@@ -188,6 +309,9 @@ function ChannelView({ channel, messages, setMessages }) {
   function insertMention() {
     insertTextAtCursor("@");
   }
+
+  if (!channel) return <div>Channel not found</div>;
+  if (loadingMessages) return <div>Loading messages...</div>;
 
   return (
     <section className="chat-view">
@@ -201,12 +325,12 @@ function ChannelView({ channel, messages, setMessages }) {
 
         <div className="members-pill">
           <Users size={12} />
-          {channel.members} members
+          {channel.memberCount} members
         </div>
       </div>
 
       <div className="chat-content">
-        {channelMessages.length === 0 ? (
+        {messages.length === 0 ? (
           <EmptyChannel channel={channel} />
         ) : (
           <>
@@ -217,7 +341,7 @@ function ChannelView({ channel, messages, setMessages }) {
             </div>
 
             <div className="message-list">
-              {channelMessages.map((item) => (
+              {messages.map((item) => (
                 <MessageItem
                   key={item.id}
                   message={item}
@@ -231,10 +355,13 @@ function ChannelView({ channel, messages, setMessages }) {
 
       <form className="figma-composer" onSubmit={handleSend}>
         <div className="figma-composer-toolbar">
-          <button type="button" aria-label="Bold" onClick={() => runFormat("bold")}>
+          <button
+            type="button"
+            aria-label="Bold"
+            onClick={() => runFormat("bold")}
+          >
             <Bold size={14} />
           </button>
-
           <button
             type="button"
             aria-label="Italic"
@@ -242,7 +369,6 @@ function ChannelView({ channel, messages, setMessages }) {
           >
             <Italic size={14} />
           </button>
-
           <button
             type="button"
             aria-label="List"
@@ -250,7 +376,6 @@ function ChannelView({ channel, messages, setMessages }) {
           >
             <List size={14} />
           </button>
-
           <button type="button" aria-label="Code" onClick={insertCode}>
             <Code size={14} />
           </button>
@@ -350,9 +475,7 @@ function ChannelIntro({ channel }) {
   return (
     <div className="channel-welcome">
       <div className="hash-large">#</div>
-
       <h2>Welcome to #{channel.name}!</h2>
-
       <p>
         This is the start of the #{channel.name} channel. Use this space for
         essential updates, company-wide broadcasts, and team-wide conversation.
@@ -365,17 +488,13 @@ function EmptyChannel({ channel }) {
   return (
     <div className="empty-channel-state">
       <div className="hash-large active-hash">
-        #
-        <span></span>
+        #<span></span>
       </div>
-
       <h2>This is the start of the #{channel.name} channel</h2>
-
       <p>
         This channel was created recently. Send the first message below to kick
         off the conversation with your team.
       </p>
-
       <div className="empty-channel-cards">
         <article>
           <div>
@@ -386,7 +505,6 @@ function EmptyChannel({ channel }) {
             Broadcast a kickoff post and set clear communication expectations.
           </span>
         </article>
-
         <article>
           <div>
             <Pin size={15} />
@@ -397,7 +515,6 @@ function EmptyChannel({ channel }) {
           </span>
         </article>
       </div>
-
       <div className="today-line empty-today">
         <span>Today</span>
       </div>

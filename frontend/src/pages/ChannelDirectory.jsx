@@ -1,6 +1,9 @@
 import { Check, ChevronDown, Hash, Plus, Search } from "lucide-react";
+import { useOutletContext } from "react-router-dom";
 
-function ChannelDirectory({ channels, onJoin, onOpen, onCreate }) {
+function ChannelDirectory() {
+  const { channels, joinChannel, openChannel } = useOutletContext();
+
   return (
     <section className="figma-directory">
       <div className="directory-panel">
@@ -17,7 +20,7 @@ function ChannelDirectory({ channels, onJoin, onOpen, onCreate }) {
               <input placeholder="Search channels by name..." />
             </label>
 
-            <button className="primary-btn compact-action" onClick={onCreate}>
+            <button className="primary-btn compact-action" onClick={() => {}}>
               <Plus size={12} />
               Create Channel
             </button>
@@ -25,7 +28,7 @@ function ChannelDirectory({ channels, onJoin, onOpen, onCreate }) {
         </header>
 
         <div className="directory-sub">
-          <strong>Available Channel ({channels.length})</strong>
+          <strong>Available Channels ({channels.length})</strong>
           <button>
             sort by: <b>Most active</b>
             <ChevronDown size={13} />
@@ -42,22 +45,19 @@ function ChannelDirectory({ channels, onJoin, onOpen, onCreate }) {
               <div>
                 <h3>
                   {channel.name}
-                  {channel.badge && <span>{channel.badge}</span>}
+                  {channel.isMember && <span>Joined</span>}
                 </h3>
                 <p>{channel.description}</p>
-                <small>
-                  {channel.members} Members
-                  {channel.updated && <> • {channel.updated}</>}
-                </small>
+                <small>{channel.memberCount} Members</small>
               </div>
 
-              {channel.joined ? (
-                <button className="joined-btn" onClick={() => onOpen(channel)}>
+              {channel.isMember ? (
+                <button className="joined-btn" onClick={() => openChannel(channel)}>
                   <Check size={12} />
-                  Join
+                  Open
                 </button>
               ) : (
-                <button className="plain-join-btn" onClick={() => onJoin(channel.id)}>
+                <button className="plain-join-btn" onClick={() => joinChannel(channel.id)}>
                   Join
                 </button>
               )}

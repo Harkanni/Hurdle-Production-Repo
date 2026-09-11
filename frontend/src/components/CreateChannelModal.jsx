@@ -1,18 +1,15 @@
 import { useState } from "react";
 import { AlertCircle, Hash, X } from "lucide-react";
+import { apiFetch } from "../lib/apiFetch";
 
-function CreateChannelModal({
-  channels,
-  setChannels,
-  setActiveChannel,
-  setShowCreateModal,
-  setView,
-}) {
+function CreateChannelModal({ setChannels, setShowCreateModal, onCreated }) {
   const [form, setForm] = useState({ name: "", description: "" });
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleCreate(e) {
+  async function handleCreate(e) {
     e.preventDefault();
+    setError("");
 
     const cleanName = form.name.trim().toLowerCase().replace(/\s+/g, "-");
 
@@ -21,26 +18,31 @@ function CreateChannelModal({
       return;
     }
 
-    const exists = channels.some((channel) => channel.name === cleanName);
+    setSubmitting(true);
 
-    if (exists) {
-      setError("A channel with this name already exists.");
-      return;
+    try {
+      const newChannel = await apiFetch("/api/channels", {
+        method: "POST",
+        body: JSON.stringify({
+          name: cleanName,
+          description: form.description || undefined,
+        }),
+      });
+
+      // Backend already adds the creator as a member, so mark isMember
+      // locally to match what a fresh GET /channels would return.
+      setChannels((prev) => [...prev, { ...newChannel, isMember: true }]);
+      setShowCreateModal(false);
+      onCreated(newChannel);
+    } catch (err) {
+      if (err.message?.includes("409")) {
+        setError("A channel with this name already exists.");
+      } else {
+        setError("Failed to create channel. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
     }
-
-    const newChannel = {
-      id: Date.now(),
-      name: cleanName,
-      description: form.description || "New team conversation space.",
-      joined: true,
-      members: 1,
-      badge: "Joined",
-    };
-
-    setChannels([...channels, newChannel]);
-    setActiveChannel(newChannel);
-    setShowCreateModal(false);
-    setView("channel");
   }
 
   return (
@@ -110,7 +112,9 @@ function CreateChannelModal({
             Cancel
           </button>
 
-          <button className="primary-btn compact">Create Channel</button>
+          <button className="primary-btn compact" disabled={submitting}>
+            {submitting ? "Creating..." : "Create Channel"}
+          </button>
         </div>
       </form>
     </div>
