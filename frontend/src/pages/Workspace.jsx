@@ -214,7 +214,7 @@ function MobileAside({
   return (
     <aside className="mobile-aside-panel">
       <div className="mobile-aside-head">
-        <LogoMark />
+        <LogoMark />        
         <strong>Huddle</strong>
         <button type="button" onClick={onClose}>
           <X size={16} />
@@ -227,10 +227,9 @@ function MobileAside({
           <strong>{currentUser?.displayName || "Me"}</strong>
           <span>{currentUser?.email || ""}</span>
         </div>
-        <span>{">"}</span>
       </div>
 
-      <div className="figma-search">
+      <div className="figma-jump-search">
         <Search size={13} />
         <input
           type="text"
@@ -238,7 +237,6 @@ function MobileAside({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <kbd>⌘K</kbd>
       </div>
 
       <div className="figma-side-heading">
@@ -505,7 +503,7 @@ function MobileBottomNav({ view, onHome, onDirectory, onDMs, onProfile }) {
 }
 
 function LogoMark() {
-  return <img src="/images/huddle-logo.png" alt="Huddle logo" />;
+  return <img src="/images/huddle-logo.jpg" alt="Huddle logo" />;
 }
 
 export default Workspace;

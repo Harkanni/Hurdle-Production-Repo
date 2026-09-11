@@ -59,7 +59,6 @@ function Sidebar({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <kbd>⌘K</kbd>
       </div>
 
       <div className="figma-side-heading">

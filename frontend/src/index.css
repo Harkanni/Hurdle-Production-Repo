@@ -1775,7 +1775,7 @@ textarea::placeholder {
   .mini-topbar::before,
   .no-channel-top::before,
   .channel-top::before {
-    content: "<";
+    content: " ";
     position: absolute;
     left: 18px;
     font-size: 16px;
