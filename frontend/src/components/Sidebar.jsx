@@ -36,7 +36,11 @@ function Sidebar({
         <Logo small />
       </div>
 
-      <button className="figma-workspace-card" type="button" onClick={onNavigateHome}>
+      <button
+        className="figma-workspace-card"
+        type="button"
+        onClick={onNavigateHome}
+      >
         <div className="figma-workspace-icon">⌘</div>
 
         <div>
@@ -154,12 +158,16 @@ function Sidebar({
         </div>
       )}
 
-      <UserBar onLogout={onLogout} user={currentUser} />
+      <UserBar
+        onLogout={onLogout}
+        user={currentUser}
+        onSettings={onNavigateProfile}
+      />
     </aside>
   );
 }
 
-export function UserBar({ onLogout, user }) {
+export function UserBar({ onLogout, user, onSettings }) {
   return (
     <div className="figma-side-user">
       <img className="figma-user-avatar" src="/images/mike.png" alt="Profile" />
@@ -169,7 +177,7 @@ export function UserBar({ onLogout, user }) {
         <span>Online</span>
       </div>
 
-      <button type="button" aria-label="Settings">
+      <button type="button" aria-label="Settings" onClick={onSettings}>
         <Settings size={13} />
       </button>
 

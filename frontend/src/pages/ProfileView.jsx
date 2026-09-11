@@ -1,11 +1,28 @@
+import { useState } from "react";
 import { Bell, LogOut, Mail, UserCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useCurrentUser } from "../hooks/useCurrentUser";
+import { resetSocket } from "../lib/socket";
+import SignOutModal from "../components/SignOutModal";
 
-function ProfileView({ onLogout }) {
+function ProfileView() {
+  const navigate = useNavigate();
+  const currentUser = useCurrentUser();
+  const [showSignOut, setShowSignOut] = useState(false);
+
+  function confirmLogout() {
+    setShowSignOut(false);
+    resetSocket();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  }
+
   return (
     <section className="profile-view">
       <div className="profile-panel">
         <div className="profile-avatar-large">
-          <img src="/images/mike.png" alt="Mike profile" />
+          <img src="/images/mike.png" alt="Profile" />
         </div>
 
         <h1>
@@ -25,7 +42,7 @@ function ProfileView({ onLogout }) {
             <UserCircle size={16} />
             <div>
               <span>Name</span>
-              <strong>Mike Jenkins</strong>
+              <strong>{currentUser?.displayName || "Unknown"}</strong>
             </div>
           </div>
 
@@ -33,7 +50,7 @@ function ProfileView({ onLogout }) {
             <Mail size={16} />
             <div>
               <span>Email</span>
-              <strong>mike@gmail.com</strong>
+              <strong>{currentUser?.email || "Unknown"}</strong>
             </div>
           </div>
         </div>
@@ -57,11 +74,21 @@ function ProfileView({ onLogout }) {
           </label>
         </div>
 
-        <button className="danger-btn profile-logout-btn" onClick={onLogout}>
+        <button
+          className="danger-btn profile-logout-btn"
+          onClick={() => setShowSignOut(true)}
+        >
           <LogOut size={15} />
           Sign Out of Workspace
         </button>
       </div>
+
+      {showSignOut && (
+        <SignOutModal
+          onCancel={() => setShowSignOut(false)}
+          onConfirm={confirmLogout}
+        />
+      )}
     </section>
   );
 }
