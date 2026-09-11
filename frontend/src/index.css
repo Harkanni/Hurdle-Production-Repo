@@ -1176,6 +1176,18 @@ textarea::placeholder {
   padding: 70px 80px 20px;
 }
 
+.white-box {
+  position: fixed;
+  left: 0px;
+  right: 0px;
+  bottom: 50px;
+  width: auto;
+  min-height: 58px;
+  margin: 0;
+  z-index: 1;
+  background: #fff;
+}
+
 .channel-welcome,
 .message-list,
 .today-line {
@@ -1927,7 +1939,7 @@ textarea::placeholder {
   }
 
   .chat-content {
-    padding: 44px 20px 18px;
+    padding: 44px 20px 48px;
   }
 
   .channel-welcome,
