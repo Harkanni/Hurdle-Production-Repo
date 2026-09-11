@@ -6,8 +6,10 @@ import {
   Send,
   Smile,
 } from "lucide-react";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 function DMView() {
+  const currentUser = useCurrentUser();
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -30,8 +32,8 @@ function DMView() {
       ...previousMessages,
       {
         id: Date.now(),
-        sender: "Mike",
-        initials: "M",
+        sender: currentUser?.displayName || "Mike",
+        initials: currentUser?.initials || currentUser?.displayName?.[0] || "M",
         text,
         time: "Just now",
         mine: true,
