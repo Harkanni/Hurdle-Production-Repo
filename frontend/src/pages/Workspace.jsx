@@ -136,7 +136,7 @@ function Workspace() {
         ) : view === "home" ? (
           <NoChannelSelected onBrowse={() => navigate("/workspace/directory")} />
         ) : (
-          <Outlet context={{ channels, joinChannel, openChannel, socket, setChannels }} />
+          <Outlet context={{ channels, joinChannel, openChannel, socket, setChannels, onCreate: () => setShowCreateModal(true), }} />
         )}
 
         <MobileBottomNav
