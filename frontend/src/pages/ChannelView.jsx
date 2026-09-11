@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import MessageItem from "../components/MessageItem";
 import { apiFetch } from "../lib/apiFetch";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 const emojis = [
   "😀",
@@ -44,43 +45,15 @@ const emojis = [
   "⭐",
 ];
 
-const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-
 // Adapts a backend message object into the shape MessageItem expects.
 // Field names here are best-guess pending the real Message schema —
 // see flagged assumptions in chat.
-function mapMessage(msg) {
-  const id = String(msg.id || msg._id);
-  const senderId = String(
-    msg.senderId || msg.sender?.id || msg.sender?._id || "",
-  );
-  const isMine = currentUser && senderId === String(currentUser.id);
-
-  const senderName = isMine
-    ? currentUser.displayName
-    : msg.sender?.displayName || msg.senderName || "Unknown";
-
-  return {
-    id,
-    channelId: msg.channelId,
-    sender: senderName,
-    initials: senderName.slice(0, 1).toUpperCase(),
-    text: msg.content,
-    fileName: msg.fileName || "",
-    time: msg.createdAt
-      ? new Date(msg.createdAt).toLocaleTimeString([], {
-          hour: "numeric",
-          minute: "2-digit",
-        })
-      : "Just now",
-    mine: isMine,
-    status: "sent",
-  };
-}
 
 function ChannelView() {
   const { channelId } = useParams();
   const { channels, socket } = useOutletContext();
+  const currentUser = useCurrentUser();
+
   const channel = channels.find((c) => c.id === channelId);
 
   const [messages, setMessages] = useState([]);
@@ -152,6 +125,35 @@ function ChannelView() {
       socket.off("message_deleted", onMessageDeleted);
     };
   }, [socket, channelId]);
+
+  function mapMessage(msg) {
+    const id = String(msg.id || msg._id);
+    const senderId = String(
+      msg.senderId || msg.sender?.id || msg.sender?._id || "",
+    );
+    const isMine = currentUser && senderId === String(currentUser.id);
+
+    const senderName = isMine
+      ? currentUser.displayName
+      : msg.sender?.displayName || msg.senderName || "Unknown";
+
+    return {
+      id,
+      channelId: msg.channelId,
+      sender: senderName,
+      initials: senderName.slice(0, 1).toUpperCase(),
+      text: msg.content,
+      fileName: msg.fileName || "",
+      time: msg.createdAt
+        ? new Date(msg.createdAt).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+          })
+        : "Just now",
+      mine: isMine,
+      status: "sent",
+    };
+  }
 
   function getPlainMessage() {
     return messageInputRef.current?.innerText.trim() || "";

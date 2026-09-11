@@ -1,5 +1,6 @@
 import { Hash, LogOut, Plus, Search, Settings } from "lucide-react";
 import Logo from "./Logo";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 function Sidebar({
   channels,
@@ -18,7 +19,7 @@ function Sidebar({
 }) {
   const isSearching = searchTerm.trim().length > 0;
   const joinedChannels = channels.filter((channel) => channel.isMember);
-  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  const currentUser = useCurrentUser();
 
   function handleJoinChannel(e, channelId) {
     e.preventDefault();

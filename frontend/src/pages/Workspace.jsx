@@ -16,7 +16,8 @@ import {
 import Sidebar from "../components/Sidebar";
 import CreateChannelModal from "../components/CreateChannelModal";
 import { apiFetch } from "../lib/apiFetch";
-import { getSocket } from "../lib/socket";
+import { getSocket, resetSocket } from "../lib/socket";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 function Workspace() {
   const navigate = useNavigate();
@@ -72,6 +73,7 @@ function Workspace() {
 
   function confirmLogout() {
     setShowSignOut(false);
+    resetSocket();
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
@@ -207,7 +209,7 @@ function MobileAside({
   onLogout,
 }) {
   const isSearching = searchTerm.trim().length > 0;
-  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  const currentUser = useCurrentUser();
 
   return (
     <aside className="mobile-aside-panel">
@@ -309,7 +311,7 @@ function MobileAside({
 }
 
 function SignOutModal({ onCancel, onConfirm }) {
-  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  const currentUser = useCurrentUser();
 
   return (
     <div className="signout-overlay">
