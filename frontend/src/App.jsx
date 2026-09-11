@@ -1,38 +1,35 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState } from "react";
 import Start from "./pages/Start";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Workspace from "./pages/Workspace";
+import ChannelView from "./pages/ChannelView";
+import ChannelDirectory from "./pages/ChannelDirectory";
+import DMView from "./pages/DMView";
+import ProfileView from "./pages/ProfileView";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { initialChannels, initialMessages } from "./data/mockData";
 
 function App() {
-  const [channels, setChannels] = useState(initialChannels);
-  const [activeChannel, setActiveChannel] = useState(null);
-  const [messages, setMessages] = useState(initialMessages);
-
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+
         <Route
           path="/workspace"
           element={
             <ProtectedRoute>
-              <Workspace
-                channels={channels}
-                setChannels={setChannels}
-                activeChannel={activeChannel}
-                setActiveChannel={setActiveChannel}
-                messages={messages}
-                setMessages={setMessages}
-              />
+              <Workspace />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route path="channel/:channelId" element={<ChannelView />} />
+          <Route path="directory" element={<ChannelDirectory />} />
+          <Route path="dms" element={<DMView />} />
+          <Route path="profile" element={<ProfileView />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

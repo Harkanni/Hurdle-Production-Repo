@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   Hash,
   Home,
@@ -14,32 +14,59 @@ import {
   X,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
-import ChannelDirectory from "./ChannelDirectory";
-import ChannelView from "./ChannelView";
 import CreateChannelModal from "../components/CreateChannelModal";
-import DMView from "./DMView";
-import ProfileView from "./ProfileView";
+import { apiFetch } from "../lib/apiFetch";
+import { getSocket, resetSocket } from "../lib/socket";
+import { useCurrentUser } from "../hooks/useCurrentUser";
+import SignOutModal from "../components/SignOutModal";
 
-function Workspace({
-  channels,
-  setChannels,
-  activeChannel,
-  setActiveChannel,
-  messages,
-  setMessages,
-}) {
+function Workspace() {
   const navigate = useNavigate();
-  const [view, setView] = useState("home");
+  const location = useLocation();
+
+  const [channels, setChannels] = useState([]);
+  const [loadingChannels, setLoadingChannels] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMobileAside, setShowMobileAside] = useState(false);
   const [showSignOut, setShowSignOut] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    apiFetch("/api/channels")
+      .then(setChannels)
+      .catch((err) => console.error("Failed to load channels:", err))
+      .finally(() => setLoadingChannels(false));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const s = getSocket(token);
+    s.connect();
+    setSocket(s);
+
+    return () => {
+      s.disconnect();
+    };
+  }, []);
 
   const filteredChannels = channels.filter((channel) =>
-    channel.name.toLowerCase().includes(searchTerm.trim().toLowerCase()),
+    channel.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
   );
 
-  const joinedChannels = channels.filter((channel) => channel.joined);
+  const view = location.pathname.includes("/directory")
+    ? "directory"
+    : location.pathname.includes("/dms")
+    ? "dms"
+    : location.pathname.includes("/profile")
+    ? "profile"
+    : location.pathname.includes("/channel/")
+    ? "channel"
+    : "home";
+
+  const activeChannelId = location.pathname.includes("/channel/")
+    ? location.pathname.split("/channel/")[1]
+    : null;
 
   function requestLogout() {
     setShowSignOut(true);
@@ -47,42 +74,47 @@ function Workspace({
 
   function confirmLogout() {
     setShowSignOut(false);
+    resetSocket();
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
   }
 
   function openChannel(channel) {
-    setActiveChannel(channel);
-    setView("channel");
     setSearchTerm("");
     setShowMobileAside(false);
+    navigate(`/workspace/channel/${channel.id}`);
   }
 
-  function joinChannel(channelId) {
-    const updatedChannels = channels.map((channel) =>
-      channel.id === channelId ? { ...channel, joined: true } : channel,
-    );
+  async function joinChannel(channelId) {
+    try {
+      await apiFetch(`/api/channels/${channelId}/join`, { method: "POST" });
+      setChannels((prev) =>
+        prev.map((c) => (c.id === channelId ? { ...c, isMember: true } : c))
+      );
+      navigate(`/workspace/channel/${channelId}`);
+    } catch (err) {
+      console.error("Failed to join channel:", err);
+    }
+  }
 
-    const selectedChannel = updatedChannels.find(
-      (channel) => channel.id === channelId,
-    );
+  const joinedChannels = channels.filter((c) => c.isMember);
 
-    setChannels(updatedChannels);
-    setActiveChannel(selectedChannel);
-    setView("channel");
-    setSearchTerm("");
-    setShowMobileAside(false);
+  if (loadingChannels) {
+    return <div className="workspace-loading">Loading workspace...</div>;
   }
 
   return (
     <div className="figma-shell">
       <Sidebar
         channels={filteredChannels}
-        activeChannel={activeChannel}
+        activeChannelId={activeChannelId}
         view={view}
-        setView={setView}
-        setActiveChannel={setActiveChannel}
+        onNavigateHome={() => navigate("/workspace")}
+        onNavigateDirectory={() => navigate("/workspace/directory")}
+        onNavigateDMs={() => navigate("/workspace/dms")}
+        onNavigateProfile={() => navigate("/workspace/profile")}
+        onOpenChannel={openChannel}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         onJoin={joinChannel}
@@ -94,50 +126,35 @@ function Workspace({
         <MobileTopControls
           view={view}
           setShowMobileAside={setShowMobileAside}
-          setActiveChannel={setActiveChannel}
-          setView={setView}
+          onBack={() => navigate("/workspace")}
         />
 
-        {view === "directory" ? (
-          <ChannelDirectory
-            channels={channels}
-            onJoin={joinChannel}
-            onOpen={openChannel}
-            onCreate={() => setShowCreateModal(true)}
-          />
-        ) : view === "dms" ? (
-          <DMView />
-        ) : view === "profile" ? (
-          <ProfileView onLogout={requestLogout} />
-        ) : activeChannel ? (
-          <ChannelView
-            channel={activeChannel}
-            messages={messages}
-            setMessages={setMessages}
-          />
-        ) : joinedChannels.length === 0 ? (
+        {view === "home" && joinedChannels.length === 0 ? (
           <NoChannelsJoined
             channels={channels}
             onJoin={joinChannel}
-            onBrowse={() => setView("directory")}
+            onBrowse={() => navigate("/workspace/directory")}
             onCreate={() => setShowCreateModal(true)}
           />
+        ) : view === "home" ? (
+          <NoChannelSelected onBrowse={() => navigate("/workspace/directory")} />
         ) : (
-          <NoChannelSelected onBrowse={() => setView("directory")} />
+          <Outlet context={{ channels, joinChannel, openChannel, socket, setChannels, onCreate: () => setShowCreateModal(true), }} />
         )}
 
         <MobileBottomNav
           view={view}
-          setView={setView}
-          setActiveChannel={setActiveChannel}
-          setSearchTerm={setSearchTerm}
+          onHome={() => navigate("/workspace")}
+          onDirectory={() => navigate("/workspace/directory")}
+          onDMs={() => navigate("/workspace/dms")}
+          onProfile={() => navigate("/workspace/profile")}
         />
       </main>
 
       {showMobileAside && (
         <MobileAside
           channels={filteredChannels}
-          activeChannel={activeChannel}
+          activeChannelId={activeChannelId}
           openChannel={openChannel}
           onJoin={joinChannel}
           searchTerm={searchTerm}
@@ -149,31 +166,21 @@ function Workspace({
       )}
 
       {showSignOut && (
-        <SignOutModal
-          onCancel={() => setShowSignOut(false)}
-          onConfirm={confirmLogout}
-        />
+        <SignOutModal onCancel={() => setShowSignOut(false)} onConfirm={confirmLogout} />
       )}
 
       {showCreateModal && (
         <CreateChannelModal
-          channels={channels}
           setChannels={setChannels}
-          setActiveChannel={setActiveChannel}
           setShowCreateModal={setShowCreateModal}
-          setView={setView}
+          onCreated={(newChannel) => navigate(`/workspace/channel/${newChannel.id}`)}
         />
       )}
     </div>
   );
 }
 
-function MobileTopControls({
-  view,
-  setShowMobileAside,
-  setActiveChannel,
-  setView,
-}) {
+function MobileTopControls({ view, setShowMobileAside, onBack }) {
   return (
     <button
       type="button"
@@ -182,8 +189,7 @@ function MobileTopControls({
         if (view === "home") {
           setShowMobileAside(true);
         } else {
-          setActiveChannel(null);
-          setView("home");
+          onBack();
         }
       }}
     >
@@ -194,7 +200,7 @@ function MobileTopControls({
 
 function MobileAside({
   channels,
-  activeChannel,
+  activeChannelId,
   openChannel,
   onJoin,
   searchTerm,
@@ -204,11 +210,12 @@ function MobileAside({
   onLogout,
 }) {
   const isSearching = searchTerm.trim().length > 0;
+  const currentUser = useCurrentUser();
 
   return (
     <aside className="mobile-aside-panel">
       <div className="mobile-aside-head">
-        <LogoMark />
+        <LogoMark />        
         <strong>Huddle</strong>
         <button type="button" onClick={onClose}>
           <X size={16} />
@@ -216,15 +223,14 @@ function MobileAside({
       </div>
 
       <div className="mobile-profile-row">
-        <img src="/images/mike.png" alt="Mike profile" />
+        <img src="/images/mike.png" alt="Profile" />
         <div>
-          <strong>Mike</strong>
-          <span>mike@gmail.com</span>
+          <strong>{currentUser?.displayName || "Me"}</strong>
+          <span>{currentUser?.email || ""}</span>
         </div>
-        <span>{">"}</span>
       </div>
 
-      <div className="figma-search">
+      <div className="figma-jump-search">
         <Search size={13} />
         <input
           type="text"
@@ -232,7 +238,6 @@ function MobileAside({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <kbd>⌘K</kbd>
       </div>
 
       <div className="figma-side-heading">
@@ -249,22 +254,22 @@ function MobileAside({
               <button
                 type="button"
                 className={
-                  activeChannel?.id === channel.id
+                  activeChannelId === channel.id
                     ? "figma-channel active"
                     : "figma-channel"
                 }
                 onClick={() => {
-                  if (channel.joined) {
+                  if (channel.isMember) {
                     openChannel(channel);
                   }
                 }}
               >
                 <Hash size={12} />
                 {channel.name}
-                {!channel.joined && <small>Join first</small>}
+                {!channel.isMember && <small>Join first</small>}
               </button>
 
-              {!channel.joined && (
+              {!channel.isMember && (
                 <button
                   type="button"
                   className="sidebar-join-btn"
@@ -304,46 +309,10 @@ function MobileAside({
   );
 }
 
-function SignOutModal({ onCancel, onConfirm }) {
-  return (
-    <div className="signout-overlay">
-      <section className="signout-modal">
-        <div className="signout-icon">
-          <LogOut size={18} />
-        </div>
-
-        <h2>Sign out of Huddle?</h2>
-
-        <p>
-          You are signed in as Mike. You will need to enter your credentials to
-          access your workspace again.
-        </p>
-
-        <div className="signout-user">
-          <img src="/images/mike.png" alt="Mike profile" />
-          <div>
-            <strong>Mike</strong>
-            <span>Huddle Workspace • Active</span>
-          </div>
-        </div>
-
-        <div className="signout-actions">
-          <button type="button" className="soft-btn" onClick={onCancel}>
-            Cancel
-          </button>
-
-          <button type="button" className="danger-btn" onClick={onConfirm}>
-            Sign Out
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
 
 function NoChannelsJoined({ channels, onJoin, onBrowse, onCreate }) {
   const recommended = channels.filter(
-    (channel) => channel.name === "general" || channel.name === "announcements",
+    (channel) => channel.name === "general" || channel.name === "announcements"
   );
 
   return (
@@ -385,7 +354,7 @@ function NoChannelsJoined({ channels, onJoin, onBrowse, onCreate }) {
               <span>Recommended default channels for every team member</span>
             </div>
 
-            <small>2 suggestions</small>
+            <small>{recommended.length} suggestions</small>
           </div>
 
           {recommended.map((channel) => (
@@ -466,18 +435,10 @@ function NoChannelSelected({ onBrowse }) {
   );
 }
 
-function MobileBottomNav({ view, setView, setActiveChannel, setSearchTerm }) {
+function MobileBottomNav({ view, onHome, onDirectory, onDMs, onProfile }) {
   return (
     <nav className="mobile-bottom-nav">
-      <button
-        type="button"
-        className={view === "home" ? "active" : ""}
-        onClick={() => {
-          setActiveChannel(null);
-          setSearchTerm("");
-          setView("home");
-        }}
-      >
+      <button type="button" className={view === "home" ? "active" : ""} onClick={onHome}>
         <Home size={16} />
         <span>Home</span>
       </button>
@@ -485,37 +446,18 @@ function MobileBottomNav({ view, setView, setActiveChannel, setSearchTerm }) {
       <button
         type="button"
         className={view === "directory" || view === "channel" ? "active" : ""}
-        onClick={() => {
-          setSearchTerm("");
-          setView("directory");
-        }}
+        onClick={onDirectory}
       >
         <Hash size={16} />
         <span>Channel</span>
       </button>
 
-      <button
-        type="button"
-        className={view === "dms" ? "active" : ""}
-        onClick={() => {
-          setActiveChannel(null);
-          setSearchTerm("");
-          setView("dms");
-        }}
-      >
+      <button type="button" className={view === "dms" ? "active" : ""} onClick={onDMs}>
         <MessageCircle size={16} />
         <span>DMs</span>
       </button>
 
-      <button
-        type="button"
-        className={view === "profile" ? "active" : ""}
-        onClick={() => {
-          setActiveChannel(null);
-          setSearchTerm("");
-          setView("profile");
-        }}
-      >
+      <button type="button" className={view === "profile" ? "active" : ""} onClick={onProfile}>
         <UserCircle size={16} />
         <span>Profile</span>
       </button>
@@ -524,7 +466,7 @@ function MobileBottomNav({ view, setView, setActiveChannel, setSearchTerm }) {
 }
 
 function LogoMark() {
-  return <img src="/images/huddle-logo.png" alt="Huddle logo" />;
+  return <img src="/images/huddle-logo.jpg" alt="Huddle logo" />;
 }
 
 export default Workspace;
