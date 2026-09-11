@@ -234,7 +234,7 @@ button:disabled {
 }
 
 .field-row,
-.modal-field > div {
+.modal-field>div {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -770,7 +770,7 @@ textarea::placeholder {
   font-size: 20px;
 }
 
-.welcome-center > p {
+.welcome-center>p {
   width: 430px;
   margin: 0;
   color: #6d687c;
@@ -833,7 +833,7 @@ textarea::placeholder {
   gap: 10px;
 }
 
-.recommended-card article + article {
+.recommended-card article+article {
   margin-top: 10px;
 }
 
@@ -1151,7 +1151,7 @@ textarea::placeholder {
   font-size: 15px;
 }
 
-.channel-top > span {
+.channel-top>span {
   color: #686477;
   font-size: 10px;
   border-left: 1px solid #dad7e8;
@@ -1217,7 +1217,7 @@ textarea::placeholder {
 }
 
 .channel-welcome p,
-.empty-channel-state > p {
+.empty-channel-state>p {
   margin: 0;
   color: #626071;
   line-height: 1.55;
@@ -1388,7 +1388,7 @@ textarea::placeholder {
   font-size: 20px;
 }
 
-.empty-channel-state > p {
+.empty-channel-state>p {
   width: min(100%, 520px);
 }
 
@@ -1468,13 +1468,16 @@ textarea::placeholder {
 
 .figma-composer-message {
   width: 100%;
-  height: 62px;
+  box-sizing: border-box;
+  /* ✅ padding now included in the 100% width */
   border: 0;
   outline: 0;
   background: transparent;
   padding: 0 22px;
   color: #171827;
   font-size: 16px;
+  min-height: 62px;
+  /* use min-height instead of fixed height */
 }
 
 .figma-composer-message::placeholder {
@@ -1798,7 +1801,7 @@ textarea::placeholder {
     margin-bottom: 12px;
   }
 
-  .welcome-center > p {
+  .welcome-center>p {
     width: 100%;
     max-width: 290px;
     font-size: 11px;
@@ -1918,7 +1921,7 @@ textarea::placeholder {
     padding-bottom: 64px;
   }
 
-  .channel-top > span,
+  .channel-top>span,
   .members-pill {
     display: none;
   }
@@ -1954,7 +1957,7 @@ textarea::placeholder {
     font-size: 19px;
   }
 
-  .empty-channel-state > p {
+  .empty-channel-state>p {
     width: 100%;
     max-width: 285px;
   }
@@ -1997,9 +2000,10 @@ textarea::placeholder {
   }
 
   .figma-composer-message {
-    height: 42px;
-    padding: 0 12px;
+    max-height: 92px;
+    padding: 12px 12px;
     font-size: 10px;
+    line-height: 1rem;
   }
 
   .figma-composer-bottom {
@@ -2048,6 +2052,7 @@ textarea::placeholder {
     margin: 16px 18px;
   }
 }
+
 /* Remaining mobile screens: aside and sign out modal */
 
 .mobile-menu-button {
@@ -2246,6 +2251,7 @@ textarea::placeholder {
     color: #ef4444;
   }
 }
+
 .password-toggle {
   border: 0;
   background: transparent;
@@ -2260,6 +2266,7 @@ textarea::placeholder {
 .password-toggle:hover {
   color: #3f33ad;
 }
+
 /* DMs and Profile views */
 
 .dm-chat-content {
@@ -2311,7 +2318,7 @@ textarea::placeholder {
   gap: 9px;
 }
 
-.profile-panel > p {
+.profile-panel>p {
   margin: 0 0 22px;
   color: #6d687c;
   font-size: 12px;
@@ -2399,6 +2406,7 @@ textarea::placeholder {
     padding-top: 34px;
   }
 }
+
 .figma-search-channel {
   display: flex;
   align-items: center;
@@ -2425,12 +2433,16 @@ textarea::placeholder {
   padding: 7px 10px;
   cursor: pointer;
 }
+
 .rich-message-box {
-  min-height: 72px;
+  min-height: 52px;
   outline: none;
   cursor: text;
   white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .rich-message-box:empty::before {
@@ -2445,6 +2457,7 @@ textarea::placeholder {
   padding: 2px 5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
+
 .message-text {
   margin: 4px 0 0;
   color: #1f2337;
