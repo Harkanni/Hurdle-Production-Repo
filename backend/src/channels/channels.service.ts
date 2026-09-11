@@ -19,7 +19,9 @@ export class ChannelsService {
   async createChannel(dto: CreateChannelDto, userId: string) {
     const existing = await this.channelModel.findOne({ name: dto.name });
     if (existing) {
-      throw new ConflictException(`Channel with name "${dto.name}" already exists`);
+      throw new ConflictException(
+        `Channel with name "${dto.name}" already exists`,
+      );
     }
 
     const newChannel = await this.channelModel.create({
@@ -59,11 +61,10 @@ export class ChannelsService {
 
   // ─── Get Single Channel ─────────────────────────────────────────────────────
   async getChannelById(channelId: string, userId: string) {
-    if (!Types.ObjectId.isValid(channelId)) throw new NotFoundException('Channel not found');
+    if (!Types.ObjectId.isValid(channelId))
+      throw new NotFoundException('Channel not found');
 
-    const channel = await this.channelModel
-      .findById(channelId)
-      .lean();
+    const channel = await this.channelModel.findById(channelId).lean();
 
     if (!channel) {
       throw new NotFoundException('Channel not found');
@@ -87,7 +88,8 @@ export class ChannelsService {
 
   // ─── Join Channel ───────────────────────────────────────────────────────────
   async joinChannel(channelId: string, userId: string) {
-    if (!Types.ObjectId.isValid(channelId)) throw new NotFoundException('Channel not found');
+    if (!Types.ObjectId.isValid(channelId))
+      throw new NotFoundException('Channel not found');
 
     const channel = await this.channelModel.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
@@ -100,7 +102,10 @@ export class ChannelsService {
       throw new ConflictException('You are already a member of this channel');
     }
 
-    channel.members.push({ userId: new Types.ObjectId(userId), joinedAt: new Date() });
+    channel.members.push({
+      userId: new Types.ObjectId(userId),
+      joinedAt: new Date(),
+    });
     await channel.save();
 
     return {
@@ -112,7 +117,8 @@ export class ChannelsService {
 
   // ─── Leave Channel ──────────────────────────────────────────────────────────
   async leaveChannel(channelId: string, userId: string) {
-    if (!Types.ObjectId.isValid(channelId)) throw new NotFoundException('Channel not found');
+    if (!Types.ObjectId.isValid(channelId))
+      throw new NotFoundException('Channel not found');
 
     const channel = await this.channelModel.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
@@ -141,19 +147,23 @@ export class ChannelsService {
 
     const channel = await this.channelModel
       .findById(channelId)
+      .populate('members.userId', 'displayName email')
       .lean();
 
     if (!channel) throw new NotFoundException('Channel not found');
 
     return channel.members.map((m: any) => ({
-      userId: m.userId,
+      userId: m.userId._id,
+      displayName: m.userId.displayName,
+      email: m.userId.email,
       joinedAt: m.joinedAt,
     }));
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
   async verifyMembership(channelId: string, userId: string) {
-    if (!Types.ObjectId.isValid(channelId)) throw new NotFoundException('Channel not found');
+    if (!Types.ObjectId.isValid(channelId))
+      throw new NotFoundException('Channel not found');
 
     const channel = await this.channelModel.findOne({
       _id: channelId,
