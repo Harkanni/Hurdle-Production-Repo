@@ -1,28 +1,39 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module.js';
+import { GlobalExceptionFilter } from './common/filters/http-exception.filter.js';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
 
-  // Validate all incoming request bodies — returns 400 Bad Request instead of crashing
+  // ── Global Exception Filter: returns clean JSON errors to Postman/frontend ──
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // ── Global Logging Interceptor: logs every request with response time ──
+  app.useGlobalInterceptors(new LoggingInterceptor());
+
+  // ── Global Validation Pipe: returns 400 Bad Request on invalid body ──
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,       // strip unknown fields
+    whitelist: true,
     forbidNonWhitelisted: false,
-    transform: true,       // auto-convert types
+    transform: true,
   }));
 
   app.enableCors({
     origin: [
-      'http://localhost:5173', // Your Vite dev server
-      'http://localhost:3000', // Local backend
-      'https://hurdle-frontend-ewnp.onrender.com', // Hosted Render website
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://hurdle-frontend-ewnp.onrender.com',
     ],
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+  logger.log(`🚀 Server running on http://localhost:${port}/api`);
 }
 await bootstrap();
