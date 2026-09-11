@@ -355,6 +355,7 @@ function ChannelView() {
         )}
       </div>
 
+      <div className="white-box"></div>
       <form className="figma-composer" onSubmit={handleSend}>
         <div className="figma-composer-toolbar">
           <button
